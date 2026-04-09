@@ -51,11 +51,14 @@ export default function ProductsPage() {
         }
       />
 
-      <ProductFilters />
+      {/* Filters */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <ProductFilters />
+      </div>
 
       {loadingState === 'loading' ? (
         <div className="flex h-64 items-center justify-center">
-          <Spinner size="lg" className="text-blue-600" />
+          <Spinner size="lg" className="text-indigo-600" />
         </div>
       ) : (
         <ProductList products={filtered} />

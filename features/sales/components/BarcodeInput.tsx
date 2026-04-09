@@ -56,17 +56,17 @@ export function BarcodeInput({ onProductFound, onNotFound, autoFocus = true }: B
             placeholder="Digite ou escaneie o código de barras e pressione Enter"
             className={cn(
               'w-full rounded-xl border-2 bg-white px-5 py-4 text-lg font-mono font-medium placeholder-gray-300 shadow-sm transition-all focus:outline-none',
-              'dark:bg-gray-800 dark:text-white dark:placeholder-gray-600',
+              'dark:bg-slate-800 dark:text-white dark:placeholder-slate-600',
               notFound
                 ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                : 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:focus:border-blue-500'
+                : 'border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-700 dark:focus:border-indigo-500'
             )}
             autoComplete="off"
             spellCheck={false}
           />
           {isLoading && (
             <span className="absolute right-4 top-1/2 -translate-y-1/2">
-              <Spinner size="md" className="text-blue-500" />
+              <Spinner size="md" className="text-indigo-500" />
             </span>
           )}
         </div>

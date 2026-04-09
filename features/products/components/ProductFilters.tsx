@@ -38,12 +38,12 @@ export function ProductFilters() {
         />
       </div>
       <div className="flex items-center gap-2 pb-0.5">
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
           <input
             type="checkbox"
             checked={filters.lowStock}
             onChange={(e) => setFilters({ lowStock: e.target.checked })}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
           />
           Baixo estoque
         </label>

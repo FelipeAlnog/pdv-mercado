@@ -51,21 +51,29 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Header
         title="Vendas"
         subtitle="PDV — Ponto de Venda"
         actions={
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
             <button
               onClick={() => setActiveTab('pdv')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'pdv' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400'}`}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'pdv'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+              }`}
             >
               PDV
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'history' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400'}`}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === 'history'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+              }`}
             >
               Histórico
             </button>
@@ -75,9 +83,10 @@ export default function SalesPage() {
 
       {activeTab === 'pdv' ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-              <p className="mb-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
+          {/* Barcode scanner */}
+          <div className="lg:col-span-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Escanear Produto
               </p>
               <BarcodeInput
@@ -87,7 +96,8 @@ export default function SalesPage() {
             </div>
           </div>
 
-          <div className="h-[calc(100vh-12rem)]">
+          {/* Cart */}
+          <div className="h-[calc(100vh-13rem)]">
             <Cart />
           </div>
         </div>
@@ -95,7 +105,7 @@ export default function SalesPage() {
         <div>
           {loadingState === 'loading' ? (
             <div className="flex h-64 items-center justify-center">
-              <Spinner size="lg" className="text-blue-600" />
+              <Spinner size="lg" className="text-indigo-600" />
             </div>
           ) : (
             <SaleHistory sales={sales} />
@@ -111,10 +121,11 @@ export default function SalesPage() {
       >
         {quickBarcode && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 dark:bg-yellow-900/20 dark:border-yellow-800">
-              <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                Código <span className="font-mono font-semibold">{quickBarcode}</span> não encontrado no catálogo.
-                Preencha os dados abaixo para cadastrar.
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800/50 dark:bg-amber-500/10">
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                Código{' '}
+                <span className="font-mono font-semibold">{quickBarcode}</span>{' '}
+                não encontrado no catálogo. Preencha os dados abaixo para cadastrar.
               </p>
             </div>
             <ProductForm
