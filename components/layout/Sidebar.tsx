@@ -56,11 +56,11 @@ export function Sidebar() {
       {/* Sidebar panel */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-900',
+          'fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-slate-900',
           'transition-[width,transform] duration-300 ease-in-out',
           'lg:relative lg:z-auto lg:translate-x-0',
-          collapsed ? 'lg:w-[70px]' : 'lg:w-64',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          collapsed ? 'lg:w-[70px] ' : 'lg:w-60',
+          mobileOpen ? 'translate-x-0 ml-0' : '-translate-x-full lg:translate-x-0 lg:ml-5 mt-3 mb-3 rounded-2xl  '
         )}
       >
         {/* Logo */}

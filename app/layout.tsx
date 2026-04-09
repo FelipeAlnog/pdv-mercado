@@ -1,14 +1,12 @@
 import type { Metadata } from 'next';
-import { Inter, Geist } from 'next/font/google';
+import { Geist } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
+import { cn } from '@/lib/utils';
 import './globals.css';
-import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-const inter = Inter({ subsets: ['latin'] });
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: 'PDV Mercado',
@@ -17,8 +15,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
-      <body className={`${inter.className} bg-slate-50 dark:bg-slate-950`}>
+    <html lang="pt-BR" suppressHydrationWarning className={cn('font-sans', geist.variable)}>
+      <body className="bg-background text-foreground">
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">

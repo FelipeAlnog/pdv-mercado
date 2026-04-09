@@ -13,6 +13,7 @@ import { useProductStore } from '@/store/useProductStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useSaleStore } from '@/store/useSaleStore';
 import { Product, ProductFormData } from '@/types/product';
+import { cn } from '@/lib/utils';
 
 export default function SalesPage() {
   const { fetchProducts, createProduct } = useProductStore();
@@ -56,37 +57,31 @@ export default function SalesPage() {
         title="Vendas"
         subtitle="PDV — Ponto de Venda"
         actions={
-          <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <button
-              onClick={() => setActiveTab('pdv')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === 'pdv'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
-              }`}
-            >
-              PDV
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === 'history'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
-              }`}
-            >
-              Histórico
-            </button>
+          <div className="flex overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+            {(['pdv', 'history'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium transition-colors',
+                  activeTab === tab
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                {tab === 'pdv' ? 'PDV' : 'Histórico'}
+              </button>
+            ))}
           </div>
         }
       />
 
       {activeTab === 'pdv' ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* Barcode scanner */}
+          {/* Scanner */}
           <div className="lg:col-span-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Escanear Produto
               </p>
               <BarcodeInput
@@ -105,7 +100,7 @@ export default function SalesPage() {
         <div>
           {loadingState === 'loading' ? (
             <div className="flex h-64 items-center justify-center">
-              <Spinner size="lg" className="text-indigo-600" />
+              <Spinner size="lg" className="text-primary" />
             </div>
           ) : (
             <SaleHistory sales={sales} />

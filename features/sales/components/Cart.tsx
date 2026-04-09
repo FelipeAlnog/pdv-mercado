@@ -6,11 +6,13 @@ import { useCartStore } from '@/store/useCartStore';
 import { useSaleStore } from '@/store/useSaleStore';
 import { useProductStore } from '@/store/useProductStore';
 import { CartItemRow } from './CartItemRow';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/utils/formatters';
 import { PAYMENT_METHODS } from '@/utils/constants';
 import { PaymentMethod } from '@/types/sale';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/utils';
+import { ShoppingCart, CheckCircle } from 'lucide-react';
 
 export function Cart() {
   const { items, paymentMethod, setPaymentMethod, getTotal, clearCart } = useCartStore();
@@ -43,13 +45,13 @@ export function Cart() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3.5 dark:border-slate-800">
+      <div className="flex shrink-0 items-center justify-between px-4 py-3.5">
         <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-slate-900 dark:text-white">Carrinho</h2>
+          <span className="font-semibold">Carrinho</span>
           {items.length > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
               {items.length}
             </span>
           )}
@@ -57,35 +59,39 @@ export function Cart() {
         {items.length > 0 && (
           <button
             onClick={clearCart}
-            className="text-xs font-medium text-red-500 transition-colors hover:text-red-600"
+            className="text-xs font-medium text-destructive transition-colors hover:text-destructive/80"
           >
             Limpar
           </button>
         )}
       </div>
 
+      <Separator />
+
       {/* Items */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center py-12 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
-              <svg className="h-7 w-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+              <ShoppingCart className="h-7 w-7 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium text-slate-500">Carrinho vazio</p>
-            <p className="mt-1 text-xs text-slate-400">Escaneie um código de barras para adicionar</p>
+            <p className="text-sm font-medium text-muted-foreground">Carrinho vazio</p>
+            <p className="mt-1 text-xs text-muted-foreground/70">
+              Escaneie um código de barras para adicionar
+            </p>
           </div>
         ) : (
           items.map((item) => <CartItemRow key={item.productId} item={item} />)
         )}
       </div>
 
+      <Separator />
+
       {/* Footer */}
-      <div className="shrink-0 border-t border-slate-100 p-4 space-y-3 dark:border-slate-800">
+      <div className="shrink-0 p-4 space-y-3">
         {/* Payment method */}
         <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             Forma de Pagamento
           </p>
           <div className="grid grid-cols-3 gap-1.5">
@@ -96,8 +102,8 @@ export function Cart() {
                 className={cn(
                   'rounded-lg border py-2 text-xs font-semibold transition-all duration-200',
                   paymentMethod === m.value
-                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-500/25'
-                    : 'border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-indigo-600'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border text-foreground hover:border-primary/50 hover:text-primary'
                 )}
               >
                 {m.label}
@@ -107,7 +113,7 @@ export function Cart() {
         </div>
 
         {/* Total */}
-        <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 p-4 text-white shadow-sm shadow-indigo-500/25">
+        <div className="rounded-xl bg-gradient-to-br from-primary to-violet-600 p-4 text-primary-foreground">
           <div className="mb-2 flex items-center justify-between text-sm opacity-80">
             <span>Subtotal ({itemCount} un)</span>
             <span>{formatCurrency(total)}</span>
@@ -125,9 +131,7 @@ export function Cart() {
           size="lg"
           className="w-full"
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <CheckCircle className="h-5 w-5" />
           Finalizar Venda
         </Button>
       </div>
