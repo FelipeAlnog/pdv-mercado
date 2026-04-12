@@ -41,7 +41,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
         autoFocus
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
           label="Preço (R$)"
           type="number"
@@ -69,7 +69,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
         hint="Digite ou escaneie o código de barras"
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
           label="Estoque atual"
           type="number"

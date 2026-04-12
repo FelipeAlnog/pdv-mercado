@@ -87,7 +87,7 @@ export default function SalesPage() {
             </div>
           </div>
 
-          <div className="h-[calc(100vh-12rem)]">
+          <div className="h-[420px] lg:h-[calc(100vh-12rem)]">
             <Cart />
           </div>
         </div>

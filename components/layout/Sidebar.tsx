@@ -35,23 +35,38 @@ const navItems = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const { isDark, toggle } = useDarkMode();
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6 dark:border-gray-700">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
+      <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-4 dark:border-gray-700">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-gray-900 dark:text-white">PDV Mercado</p>
           <p className="text-xs text-gray-500">Sistema de Vendas</p>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 lg:hidden dark:hover:bg-gray-800"
+            aria-label="Fechar menu"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Nav */}

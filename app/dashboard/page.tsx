@@ -13,7 +13,7 @@ import { formatCurrency } from '@/utils/formatters';
 
 export default function DashboardPage() {
   const { products, fetchProducts, loadingState: productsState } = useProductStore();
-  const { fetchSales, getTodaySales, getTodayRevenue, loadingState: salesState } = useSaleStore();
+  const { fetchSales, getTodaySales, getTodayRevenue, getTodayPendingSales, getTodayPendingRevenue, loadingState: salesState } = useSaleStore();
 
   useEffect(() => {
     fetchProducts();
@@ -26,6 +26,8 @@ export default function DashboardPage() {
 
   const todaySales = getTodaySales();
   const todayRevenue = getTodayRevenue();
+  const todayPendingSales = getTodayPendingSales();
+  const todayPendingRevenue = getTodayPendingRevenue();
   const lowStockProducts = products.filter((p) => p.stock <= p.minStock);
 
   if (isLoading) {
@@ -58,7 +60,7 @@ export default function DashboardPage() {
       />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatsCard
           title="Vendas hoje"
           value={todaySales.length}
@@ -73,11 +75,22 @@ export default function DashboardPage() {
         <StatsCard
           title="Faturamento hoje"
           value={formatCurrency(todayRevenue)}
-          subtitle="receita acumulada"
+          subtitle="pagamentos confirmados"
           iconBg="bg-green-100 text-green-600"
           icon={
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
+        <StatsCard
+          title="A Receber"
+          value={formatCurrency(todayPendingRevenue)}
+          subtitle={`${todayPendingSales.length} venda${todayPendingSales.length !== 1 ? 's' : ''} pendente${todayPendingSales.length !== 1 ? 's' : ''}`}
+          iconBg="bg-yellow-100 text-yellow-600"
+          icon={
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           }
         />
@@ -96,7 +109,7 @@ export default function DashboardPage() {
           title="Baixo estoque"
           value={lowStockProducts.length}
           subtitle="precisam de reposição"
-          iconBg="bg-yellow-100 text-yellow-600"
+          iconBg="bg-red-100 text-red-600"
           icon={
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -114,7 +127,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick links */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link href="/products">
           <div className="group flex cursor-pointer items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
             <div className="rounded-xl bg-blue-100 p-3 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
