@@ -29,9 +29,16 @@ export const saleService = {
   },
 
   async update(id: string, updates: Partial<Sale>): Promise<Sale> {
-    await delay();
-    const sale = mockDb.updateSale(id, updates);
-    if (!sale) throw new Error('Venda não encontrada');
-    return sale;
+    const res = await fetch(`${BASE}/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('Erro ao atualizar venda.');
+    const sale = await res.json();
+    return {
+      ...sale,
+      createdAt: typeof sale.createdAt === 'string' ? sale.createdAt : new Date(sale.createdAt).toISOString(),
+    };
   },
 };
