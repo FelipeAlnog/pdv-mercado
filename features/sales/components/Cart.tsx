@@ -6,10 +6,13 @@ import { useCartStore } from '@/store/useCartStore';
 import { useSaleStore } from '@/store/useSaleStore';
 import { useProductStore } from '@/store/useProductStore';
 import { CartItemRow } from './CartItemRow';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/utils/formatters';
 import { PAYMENT_METHODS } from '@/utils/constants';
 import { PaymentMethod } from '@/types/sale';
+import { cn } from '@/lib/utils';
+import { ShoppingCart, CheckCircle } from 'lucide-react';
 
 export function Cart() {
   const { items, paymentMethod, setPaymentMethod, customerName, setCustomerName, customerPhone, setCustomerPhone, dueDate, setDueDate, getTotal, clearCart } = useCartStore();
@@ -18,6 +21,7 @@ export function Cart() {
   const [loading, setLoading] = useState(false);
   const total = getTotal();
   const isPending = paymentMethod === 'pending';
+  const itemCount = items.reduce((a, i) => a + i.quantity, 0);
 
   async function handleFinalizeSale() {
     if (items.length === 0) {
@@ -40,7 +44,6 @@ export function Cart() {
           ...(dueDate && { dueDate }),
         }),
       });
-      // Sincroniza o estoque no store após a venda decrementar no mockDb
       await fetchProducts();
       toast.success('Venda finalizada com sucesso!');
       clearCart();
@@ -52,59 +55,66 @@ export function Cart() {
   }
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-        <h2 className="font-semibold text-gray-900 dark:text-white">
-          Carrinho
+      <div className="flex shrink-0 items-center justify-between px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">Carrinho</span>
           {items.length > 0 && (
-            <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs text-white">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
               {items.length}
             </span>
           )}
-        </h2>
+        </div>
         {items.length > 0 && (
           <button
             onClick={clearCart}
-            className="text-xs text-red-500 hover:underline"
+            className="text-xs font-medium text-destructive transition-colors hover:text-destructive/80"
           >
-            Limpar tudo
+            Limpar
           </button>
         )}
       </div>
 
+      <Separator />
+
       {/* Items */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-            <svg className="h-12 w-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <p className="text-sm text-gray-500">Nenhum item no carrinho</p>
-            <p className="text-xs text-gray-400 mt-1">Escaneie um código de barras para adicionar</p>
+          <div className="flex h-full flex-col items-center justify-center py-12 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+              <ShoppingCart className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">Carrinho vazio</p>
+            <p className="mt-1 text-xs text-muted-foreground/70">
+              Escaneie um código de barras para adicionar
+            </p>
           </div>
         ) : (
           items.map((item) => <CartItemRow key={item.productId} item={item} />)
         )}
       </div>
 
-      {/* Payment & Total */}
-      <div className="border-t border-gray-200 p-4 space-y-4 dark:border-gray-700">
+      <Separator />
+
+      {/* Footer */}
+      <div className="shrink-0 p-4 space-y-3">
         {/* Payment method */}
         <div>
-          <p className="mb-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Pagamento</p>
-          <div className="grid grid-cols-2 gap-2">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Forma de Pagamento
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
             {PAYMENT_METHODS.map((m) => (
               <button
                 key={m.value}
                 onClick={() => setPaymentMethod(m.value as PaymentMethod)}
-                className={`rounded-lg border py-2 text-sm font-medium transition-colors ${
+                className={cn(
+                  'rounded-lg border py-2 text-xs font-semibold transition-all duration-200',
                   paymentMethod === m.value
-                    ? m.value === 'pending'
-                      ? 'border-yellow-500 bg-yellow-500 text-white'
-                      : 'border-blue-600 bg-blue-600 text-white'
-                    : 'border-gray-300 text-gray-600 hover:border-blue-400 dark:border-gray-600 dark:text-gray-400'
-                }`}
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border text-foreground hover:border-primary/50 hover:text-primary'
+                )}
               >
                 {m.label}
               </button>
@@ -141,14 +151,14 @@ export function Cart() {
         )}
 
         {/* Total */}
-        <div className="rounded-xl bg-blue-600 p-4 text-white">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm opacity-80">Itens</span>
-            <span className="text-sm">{items.reduce((a, i) => a + i.quantity, 0)} un</span>
+        <div className="rounded-xl bg-gradient-to-br from-primary to-violet-600 p-4 text-primary-foreground">
+          <div className="mb-2 flex items-center justify-between text-sm opacity-80">
+            <span>Subtotal ({itemCount} un)</span>
+            <span>{formatCurrency(total)}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-base font-medium">Total</span>
-            <span className="text-3xl font-bold">{formatCurrency(total)}</span>
+          <div className="flex items-end justify-between">
+            <span className="text-sm font-medium opacity-90">Total</span>
+            <span className="text-3xl font-bold tracking-tight">{formatCurrency(total)}</span>
           </div>
         </div>
 
@@ -159,9 +169,7 @@ export function Cart() {
           size="lg"
           className="w-full"
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <CheckCircle className="h-5 w-5" />
           Finalizar Venda
         </Button>
       </div>

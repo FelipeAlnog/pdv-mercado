@@ -1,52 +1,19 @@
-import React from 'react';
-import { cn } from '@/utils/cn';
+import * as React from "react"
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  hint?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+import { cn } from "@/lib/utils"
+
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, leftIcon, rightIcon, className, id, ...props }, ref) => {
-    const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
-    return (
-      <div className="flex flex-col gap-1">
-        {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {label}
-          </label>
-        )}
-        <div className="relative flex items-center">
-          {leftIcon && (
-            <span className="absolute left-3 text-gray-400 pointer-events-none">{leftIcon}</span>
-          )}
-          <input
-            id={inputId}
-            ref={ref}
-            className={cn(
-              'w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
-              'dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:border-gray-600',
-              error
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 dark:border-gray-600',
-              leftIcon ? 'pl-10' : undefined,
-              rightIcon ? 'pr-10' : undefined,
-              className
-            )}
-            {...props}
-          />
-          {rightIcon && (
-            <span className="absolute right-3 text-gray-400 pointer-events-none">{rightIcon}</span>
-          )}
-        </div>
-        {error && <p className="text-xs text-red-500">{error}</p>}
-        {!error && hint && <p className="text-xs text-gray-500">{hint}</p>}
-      </div>
-    );
-  }
-);
-
-Input.displayName = 'Input';
+export { Input }

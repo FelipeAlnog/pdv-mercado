@@ -1,3 +1,2 @@
-export function cn(...classes: (string | undefined | false | null)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
+// Re-export cn from lib/utils (uses tailwind-merge for proper class deduplication)
+export { cn } from '@/lib/utils';

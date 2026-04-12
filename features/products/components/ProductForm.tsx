@@ -1,8 +1,8 @@
 'use client';
 
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Button } from '@/components/ui/Button';
+import { Field } from '@/components/ui/field';
+import { SimpleSelect } from '@/components/ui/simple-select';
+import { Button } from '@/components/ui/button';
 import { useProductForm } from '../hooks/useProductForm';
 import { Product, ProductFormData } from '@/types/product';
 import { PRODUCT_CATEGORIES } from '@/utils/constants';
@@ -32,7 +32,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Input
+      <Field
         label="Nome do produto"
         value={values.name}
         onChange={(e) => setField('name', e.target.value)}
@@ -42,7 +42,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input
+        <Field
           label="Preço (R$)"
           type="number"
           step="0.01"
@@ -52,15 +52,15 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
           error={getError('price')}
           placeholder="0,00"
         />
-        <Select
+        <SimpleSelect
           label="Categoria"
           value={values.category}
-          onChange={(e) => setField('category', e.target.value)}
+          onValueChange={(v) => setField('category', v)}
           options={categoryOptions}
         />
       </div>
 
-      <Input
+      <Field
         label="Código de barras"
         value={values.barcode}
         onChange={(e) => setField('barcode', e.target.value)}
@@ -70,7 +70,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input
+        <Field
           label="Estoque atual"
           type="number"
           min="0"
@@ -78,7 +78,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
           onChange={(e) => setField('stock', parseInt(e.target.value) || 0)}
           error={getError('stock')}
         />
-        <Input
+        <Field
           label="Estoque mínimo"
           type="number"
           min="0"
@@ -89,7 +89,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
         />
       </div>
 
-      <div className="flex justify-end gap-3 pt-2">
+      <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
           Cancelar
         </Button>

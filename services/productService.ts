@@ -1,50 +1,50 @@
 import { Product, ProductFormData } from '@/types/product';
-import { generateId } from '@/utils/formatters';
-import { MOCK_DELAY_MS } from '@/utils/constants';
-import { mockDb } from './mockDb';
 
-function delay(ms = MOCK_DELAY_MS): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const BASE = '/api/products';
 
 export const productService = {
   async getAll(): Promise<Product[]> {
-    await delay();
-    return mockDb.getProducts();
+    const res = await fetch(BASE);
+    if (!res.ok) throw new Error('Erro ao buscar produtos.');
+    return res.json();
   },
 
   async getById(id: string): Promise<Product | null> {
-    await delay();
-    return mockDb.getProductById(id) ?? null;
+    const res = await fetch(`${BASE}/${id}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('Erro ao buscar produto.');
+    return res.json();
   },
 
   async getByBarcode(barcode: string): Promise<Product | null> {
-    await delay(150);
-    return mockDb.getProductByBarcode(barcode) ?? null;
+    const res = await fetch(`${BASE}/barcode/${encodeURIComponent(barcode)}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('Erro ao buscar produto.');
+    return res.json();
   },
 
   async create(data: ProductFormData): Promise<Product> {
-    await delay();
-    const now = new Date().toISOString();
-    const product: Product = {
-      ...data,
-      id: generateId(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    return mockDb.createProduct(product);
+    const res = await fetch(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Erro ao cadastrar produto.');
+    return res.json();
   },
 
   async update(id: string, data: Partial<ProductFormData>): Promise<Product> {
-    await delay();
-    const updated = mockDb.updateProduct(id, data);
-    if (!updated) throw new Error(`Produto ${id} não encontrado.`);
-    return updated;
+    const res = await fetch(`${BASE}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Erro ao atualizar produto.');
+    return res.json();
   },
 
   async delete(id: string): Promise<void> {
-    await delay();
-    const success = mockDb.deleteProduct(id);
-    if (!success) throw new Error(`Produto ${id} não encontrado.`);
+    const res = await fetch(`${BASE}/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Erro ao excluir produto.');
   },
 };

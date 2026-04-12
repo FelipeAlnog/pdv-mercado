@@ -1,45 +1,50 @@
-'use client';
+"use client"
 
-import { Modal } from './Modal';
-import { Button } from './Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 interface ConfirmDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title?: string;
-  description?: string;
-  confirmLabel?: string;
-  loading?: boolean;
+  open: boolean
+  onClose: () => void
+  onConfirm: () => void
+  title?: string
+  description?: string
+  confirmLabel?: string
+  loading?: boolean
 }
 
 export function ConfirmDialog({
   open,
   onClose,
   onConfirm,
-  title = 'Confirmar ação',
-  description = 'Tem certeza que deseja continuar? Esta ação não pode ser desfeita.',
-  confirmLabel = 'Confirmar',
+  title = "Confirmar ação",
+  description = "Tem certeza que deseja continuar? Esta ação não pode ser desfeita.",
+  confirmLabel = "Confirmar",
   loading = false,
 }: ConfirmDialogProps) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      size="sm"
-      footer={
-        <>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button variant="danger" onClick={onConfirm} loading={loading}>
+          <Button variant="destructive" onClick={onConfirm} loading={loading}>
             {confirmLabel}
           </Button>
-        </>
-      }
-    >
-      <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
-    </Modal>
-  );
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
