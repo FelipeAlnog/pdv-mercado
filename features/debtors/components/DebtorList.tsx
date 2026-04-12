@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { Sale, PaymentMethod } from '@/types/sale';
 import { useSaleStore } from '@/store/useSaleStore';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { PAYMENT_METHODS } from '@/utils/constants';
