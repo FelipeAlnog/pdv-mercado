@@ -77,12 +77,8 @@ export default function DashboardPage() {
           title="A Receber"
           value={formatCurrency(todayPendingRevenue)}
           subtitle={`${todayPendingSales.length} venda${todayPendingSales.length !== 1 ? 's' : ''} pendente${todayPendingSales.length !== 1 ? 's' : ''}`}
-          iconBg="bg-yellow-100 text-yellow-600"
-          icon={
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
+          gradient="from-yellow-500 to-orange-500"
+          icon={<FileText className="h-6 w-6" />}
         />
         <StatsCard
           title="Produtos cadastrados"
