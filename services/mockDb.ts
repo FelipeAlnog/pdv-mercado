@@ -229,6 +229,14 @@ class MockDatabase {
     return sale;
   }
 
+  updateSale(id: string, updates: Partial<Sale>): Sale | null {
+    const index = this.sales.findIndex((s) => s.id === id);
+    if (index === -1) return null;
+    this.sales[index] = { ...this.sales[index], ...updates };
+    this.persist();
+    return this.sales[index];
+  }
+
   reset(): void {
     this.products = [...seedProducts];
     this.sales = [...seedSales];

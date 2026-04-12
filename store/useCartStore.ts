@@ -7,6 +7,9 @@ import { Product } from '@/types/product';
 interface CartState {
   items: CartItem[];
   paymentMethod: PaymentMethod;
+  customerName: string;
+  customerPhone: string;
+  dueDate: string;
 
   // Computed
   getTotal: () => number;
@@ -17,12 +20,18 @@ interface CartState {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   setPaymentMethod: (method: PaymentMethod) => void;
+  setCustomerName: (name: string) => void;
+  setCustomerPhone: (phone: string) => void;
+  setDueDate: (date: string) => void;
   clearCart: () => void;
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   paymentMethod: 'cash',
+  customerName: '',
+  customerPhone: '',
+  dueDate: '',
 
   getTotal: () => {
     return get().items.reduce((acc, item) => acc + item.subtotal, 0);
@@ -80,7 +89,19 @@ export const useCartStore = create<CartState>((set, get) => ({
     set({ paymentMethod: method });
   },
 
+  setCustomerName: (name) => {
+    set({ customerName: name });
+  },
+
+  setCustomerPhone: (phone) => {
+    set({ customerPhone: phone });
+  },
+
+  setDueDate: (date) => {
+    set({ dueDate: date });
+  },
+
   clearCart: () => {
-    set({ items: [], paymentMethod: 'cash' });
+    set({ items: [], paymentMethod: 'cash', customerName: '', customerPhone: '', dueDate: '' });
   },
 }));

@@ -14,10 +14,13 @@ export interface Sale {
   items: SaleItem[];
   total: number;
   paymentMethod: PaymentMethod;
+  customerName?: string;
+  customerPhone?: string;
+  dueDate?: string;
   createdAt: string;
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'pix';
+export type PaymentMethod = 'cash' | 'card' | 'pix' | 'pending';
 
 export interface CartItem extends SaleItem {
   product: Product;

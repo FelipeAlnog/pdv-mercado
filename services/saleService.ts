@@ -23,4 +23,10 @@ export const saleService = {
     return mockDb.createSale(sale);
   },
 
+  async update(id: string, updates: Partial<Sale>): Promise<Sale> {
+    await delay();
+    const sale = mockDb.updateSale(id, updates);
+    if (!sale) throw new Error('Venda não encontrada');
+    return sale;
+  },
 };

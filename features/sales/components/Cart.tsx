@@ -12,15 +12,20 @@ import { PAYMENT_METHODS } from '@/utils/constants';
 import { PaymentMethod } from '@/types/sale';
 
 export function Cart() {
-  const { items, paymentMethod, setPaymentMethod, getTotal, clearCart } = useCartStore();
+  const { items, paymentMethod, setPaymentMethod, customerName, setCustomerName, customerPhone, setCustomerPhone, dueDate, setDueDate, getTotal, clearCart } = useCartStore();
   const { createSale } = useSaleStore();
   const { fetchProducts } = useProductStore();
   const [loading, setLoading] = useState(false);
   const total = getTotal();
+  const isPending = paymentMethod === 'pending';
 
   async function handleFinalizeSale() {
     if (items.length === 0) {
       toast.error('Adicione produtos antes de finalizar a venda.');
+      return;
+    }
+    if (isPending && !customerName.trim()) {
+      toast.error('Informe o nome do cliente para venda a receber.');
       return;
     }
     setLoading(true);
@@ -29,6 +34,11 @@ export function Cart() {
         items: items.map(({ product: _, ...item }) => item),
         total,
         paymentMethod,
+        ...(isPending && {
+          customerName: customerName.trim(),
+          ...(customerPhone.trim() && { customerPhone: customerPhone.trim() }),
+          ...(dueDate && { dueDate }),
+        }),
       });
       // Sincroniza o estoque no store após a venda decrementar no mockDb
       await fetchProducts();
@@ -83,14 +93,16 @@ export function Cart() {
         {/* Payment method */}
         <div>
           <p className="mb-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Pagamento</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {PAYMENT_METHODS.map((m) => (
               <button
                 key={m.value}
                 onClick={() => setPaymentMethod(m.value as PaymentMethod)}
                 className={`rounded-lg border py-2 text-sm font-medium transition-colors ${
                   paymentMethod === m.value
-                    ? 'border-blue-600 bg-blue-600 text-white'
+                    ? m.value === 'pending'
+                      ? 'border-yellow-500 bg-yellow-500 text-white'
+                      : 'border-blue-600 bg-blue-600 text-white'
                     : 'border-gray-300 text-gray-600 hover:border-blue-400 dark:border-gray-600 dark:text-gray-400'
                 }`}
               >
@@ -99,6 +111,34 @@ export function Cart() {
             ))}
           </div>
         </div>
+
+        {/* Customer fields — only for pending */}
+        {isPending && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Cliente</p>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Nome do cliente *"
+              className="w-full rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-white dark:placeholder-gray-500"
+            />
+            <input
+              type="tel"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              placeholder="WhatsApp (ex: 11 99999-9999)"
+              className="w-full rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-white dark:placeholder-gray-500"
+            />
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-white dark:[color-scheme:dark]"
+            />
+            <p className="text-xs text-yellow-600 dark:text-yellow-500">Data limite de pagamento</p>
+          </div>
+        )}
 
         {/* Total */}
         <div className="rounded-xl bg-blue-600 p-4 text-white">
