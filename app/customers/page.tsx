@@ -1,29 +1,36 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import toast from 'react-hot-toast';
-import { Header } from '@/components/layout/Header';
-import { Modal } from '@/components/ui/Modal';
-import { Spinner } from '@/components/ui/Spinner';
-import { Button } from '@/components/ui/button';
-import { CustomerForm } from '@/features/customers/components/CustomerForm';
-import { CustomerList } from '@/features/customers/components/CustomerList';
-import { useCustomerStore } from '@/store/useCustomerStore';
-import { useSaleStore } from '@/store/useSaleStore';
-import { CustomerFormData } from '@/types/customer';
-import { UserPlus, Users, AlertTriangle, DollarSign, Search } from 'lucide-react';
-import { formatCurrency } from '@/utils/formatters';
-import { cn } from '@/lib/utils';
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import { Header } from "@/components/layout/Header";
+import { Modal } from "@/components/ui/Modal";
+import { Spinner } from "@/components/ui/Spinner";
+import { Button } from "@/components/ui/button";
+import { CustomerForm } from "@/features/customers/components/CustomerForm";
+import { CustomerList } from "@/features/customers/components/CustomerList";
+import { useCustomerStore } from "@/store/useCustomerStore";
+import { useSaleStore } from "@/store/useSaleStore";
+import { CustomerFormData } from "@/types/customer";
+import {
+  UserPlus,
+  Users,
+  AlertTriangle,
+  DollarSign,
+  Search,
+} from "lucide-react";
+import { formatCurrency } from "@/utils/formatters";
+import { cn } from "@/lib/utils";
 
-type Filter = 'all' | 'debtors' | 'overdue';
-
+type Filter = "all" | "debtors" | "overdue";
+//page.tsx é a página principal de clientes, onde é possível ver as estatísticas, buscar, filtrar e criar clientes. Ela consome os dados do useCustomerStore e useSaleStore para exibir as informações e realizar as ações necessárias.
 export default function CustomersPage() {
-  const { customers, loadingState, fetchCustomers, createCustomer } = useCustomerStore();
+  const { customers, loadingState, fetchCustomers, createCustomer } =
+    useCustomerStore();
   const { sales, fetchSales } = useSaleStore();
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
     fetchCustomers();
@@ -33,7 +40,7 @@ export default function CustomersPage() {
   // ── Stats ────────────────────────────────────────────────────────────────────
 
   const pendingSales = useMemo(
-    () => sales.filter((s) => s.paymentMethod === 'pending' && !s.paidAt),
+    () => sales.filter((s) => s.paymentMethod === "pending" && !s.paidAt),
     [sales],
   );
 
@@ -53,7 +60,9 @@ export default function CustomersPage() {
   }, [pendingSales]);
 
   const debtorIds = useMemo(() => {
-    return new Set(pendingSales.filter((s) => s.customerId).map((s) => s.customerId));
+    return new Set(
+      pendingSales.filter((s) => s.customerId).map((s) => s.customerId),
+    );
   }, [pendingSales]);
 
   const overdueIds = useMemo(() => {
@@ -69,15 +78,15 @@ export default function CustomersPage() {
 
   const filtered = useMemo(() => {
     let list = customers;
-    if (filter === 'debtors') list = list.filter((c) => debtorIds.has(c.id));
-    if (filter === 'overdue') list = list.filter((c) => overdueIds.has(c.id));
+    if (filter === "debtors") list = list.filter((c) => debtorIds.has(c.id));
+    if (filter === "overdue") list = list.filter((c) => overdueIds.has(c.id));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
         (c) =>
           c.name.toLowerCase().includes(q) ||
           c.phone?.includes(q) ||
-          c.cpf?.replace(/\D/g, '').includes(q.replace(/\D/g, '')),
+          c.cpf?.replace(/\D/g, "").includes(q.replace(/\D/g, "")),
       );
     }
     return list;
@@ -87,19 +96,21 @@ export default function CustomersPage() {
     setCreating(true);
     try {
       await createCustomer(data);
-      toast.success('Cliente cadastrado com sucesso!');
+      toast.success("Cliente cadastrado com sucesso!");
       setShowCreate(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erro ao cadastrar cliente.');
+      toast.error(
+        err instanceof Error ? err.message : "Erro ao cadastrar cliente.",
+      );
     } finally {
       setCreating(false);
     }
   }
 
   const FILTERS: { value: Filter; label: string }[] = [
-    { value: 'all', label: 'Todos' },
-    { value: 'debtors', label: 'Com fiado' },
-    { value: 'overdue', label: 'Inadimplentes' },
+    { value: "all", label: "Todos" },
+    { value: "debtors", label: "Com fiado" },
+    { value: "overdue", label: "Inadimplentes" },
   ];
 
   return (
@@ -135,7 +146,9 @@ export default function CustomersPage() {
             <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
               {formatCurrency(totalDebt)}
             </p>
-            <p className="text-xs text-amber-600 dark:text-amber-500">Fiado em aberto</p>
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              Fiado em aberto
+            </p>
           </div>
         </div>
 
@@ -144,8 +157,12 @@ export default function CustomersPage() {
             <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-red-700 dark:text-red-400">{overdueCount}</p>
-            <p className="text-xs text-red-600 dark:text-red-500">Inadimplentes</p>
+            <p className="text-2xl font-bold text-red-700 dark:text-red-400">
+              {overdueCount}
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-500">
+              Inadimplentes
+            </p>
           </div>
         </div>
       </div>
@@ -169,10 +186,10 @@ export default function CustomersPage() {
               key={f.value}
               onClick={() => setFilter(f.value)}
               className={cn(
-                'px-4 py-2 text-sm font-medium transition-colors',
+                "px-4 py-2 text-sm font-medium transition-colors",
                 filter === f.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               {f.label}
@@ -182,7 +199,7 @@ export default function CustomersPage() {
       </div>
 
       {/* List */}
-      {loadingState === 'loading' ? (
+      {loadingState === "loading" ? (
         <div className="flex h-64 items-center justify-center">
           <Spinner size="lg" className="text-primary" />
         </div>
