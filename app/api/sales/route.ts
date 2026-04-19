@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// ATENÇÃO: todas as vendas a prazo geram registro de devedor — revisar lógica antes de alterar paymentMethod
+
 export async function GET() {
   const sales = await prisma.sale.findMany({
     include: { items: true },
