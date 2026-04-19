@@ -20,11 +20,30 @@ model Product {
   saleItems SaleItem[]
 }
 
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  cpf       String?  @unique
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sales     Sale[]
+}
+
 model Sale {
-  id            String     @id @default(cuid())
+  id            String    @id @default(cuid())
   total         Float
   paymentMethod String
-  createdAt     DateTime   @default(now())
+  customerName  String?
+  customerPhone String?
+  dueDate       DateTime?
+  paidAt        DateTime?
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
   items         SaleItem[]
 }
 

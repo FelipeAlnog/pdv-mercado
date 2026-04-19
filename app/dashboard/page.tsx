@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/Header';
 import { StatsCard } from '@/features/dashboard/components/StatsCard';
 import { LowStockAlert } from '@/features/dashboard/components/LowStockAlert';
+import { SalesDetailModal } from '@/features/dashboard/components/SalesDetailModal';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { useProductStore } from '@/store/useProductStore';
@@ -13,6 +14,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { Plus, Package, ShoppingCart, FileText, AlertTriangle, DollarSign } from 'lucide-react';
 
 export default function DashboardPage() {
+  const [salesModalOpen, setSalesModalOpen] = useState(false);
   const { products, fetchProducts, loadingState: productsState } = useProductStore();
   const { fetchSales, getTodaySales, getTodayRevenue, getTodayPendingSales, getTodayPendingRevenue, loadingState: salesState } = useSaleStore();
 
@@ -39,6 +41,7 @@ export default function DashboardPage() {
   }
 
   return (
+    <>
     <div className="space-y-8">
       <Header
         title="Dashboard"
@@ -65,6 +68,7 @@ export default function DashboardPage() {
           subtitle="transações realizadas"
           gradient="from-blue-500 to-blue-600"
           icon={<FileText className="h-6 w-6" />}
+          onClick={() => setSalesModalOpen(true)}
         />
         <StatsCard
           title="Faturamento hoje"
@@ -72,6 +76,7 @@ export default function DashboardPage() {
           subtitle="receita acumulada"
           gradient="from-emerald-500 to-emerald-600"
           icon={<DollarSign className="h-6 w-6" />}
+          onClick={() => setSalesModalOpen(true)}
         />
         <StatsCard
           title="A Receber"
@@ -131,5 +136,8 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+
+      <SalesDetailModal open={salesModalOpen} onClose={() => setSalesModalOpen(false)} />
+    </>
   );
 }

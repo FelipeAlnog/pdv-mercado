@@ -9,6 +9,7 @@ interface CartState {
   paymentMethod: PaymentMethod;
   customerName: string;
   customerPhone: string;
+  customerId: string;
   dueDate: string;
 
   // Computed
@@ -22,6 +23,7 @@ interface CartState {
   setPaymentMethod: (method: PaymentMethod) => void;
   setCustomerName: (name: string) => void;
   setCustomerPhone: (phone: string) => void;
+  setCustomerId: (id: string) => void;
   setDueDate: (date: string) => void;
   clearCart: () => void;
 }
@@ -31,6 +33,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   paymentMethod: 'cash',
   customerName: '',
   customerPhone: '',
+  customerId: '',
   dueDate: '',
 
   getTotal: () => {
@@ -97,11 +100,15 @@ export const useCartStore = create<CartState>((set, get) => ({
     set({ customerPhone: phone });
   },
 
+  setCustomerId: (id) => {
+    set({ customerId: id });
+  },
+
   setDueDate: (date) => {
     set({ dueDate: date });
   },
 
   clearCart: () => {
-    set({ items: [], paymentMethod: 'cash', customerName: '', customerPhone: '', dueDate: '' });
+    set({ items: [], paymentMethod: 'cash', customerName: '', customerPhone: '', customerId: '', dueDate: '' });
   },
 }));

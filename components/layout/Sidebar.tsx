@@ -43,6 +43,15 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: '/customers',
+    label: 'Clientes',
+    icon: (
+      <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m4-4a4 4 0 100-8 4 4 0 000 8zm6 0a3 3 0 100-6 3 3 0 000 6zM3 14a3 3 0 100-6 3 3 0 000 6z" />
+      </svg>
+    ),
+  },
 ];
 
 interface SidebarProps {

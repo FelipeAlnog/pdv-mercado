@@ -8,6 +8,7 @@ interface StatsCardProps {
   icon: React.ReactNode;
   gradient?: string;
   trend?: { value: string; up: boolean };
+  onClick?: () => void;
 }
 
 export function StatsCard({
@@ -17,9 +18,16 @@ export function StatsCard({
   icon,
   gradient = 'from-blue-500 to-blue-600',
   trend,
+  onClick,
 }: StatsCardProps) {
   return (
-    <Card className="group overflow-hidden transition-shadow hover:shadow-md">
+    <Card
+      className={cn(
+        'group overflow-hidden transition-shadow hover:shadow-md',
+        onClick && 'cursor-pointer hover:border-primary/40 active:scale-[0.98] transition-transform'
+      )}
+      onClick={onClick}
+    >
       <CardContent className="pt-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">

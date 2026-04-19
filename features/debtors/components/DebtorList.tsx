@@ -18,11 +18,21 @@ interface DebtorGroup {
   earliestDueDate?: string;
 }
 
+function parseDueDate(dueDate: string): Date {
+  // Remove a parte de tempo se já vier como ISO completo (ex: 2026-04-19T00:00:00.000Z)
+  const datePart = dueDate.split('T')[0];
+  return new Date(datePart + 'T00:00:00');
+}
+
+function formatDueDate(dueDate: string): string {
+  return parseDueDate(dueDate).toLocaleDateString('pt-BR');
+}
+
 function getDueStatus(dueDate?: string): { label: string; variant: 'danger' | 'warning' | 'default' } {
   if (!dueDate) return { label: 'Sem vencimento', variant: 'default' };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate + 'T00:00:00');
+  const due = parseDueDate(dueDate);
   const diff = Math.floor((due.getTime() - today.getTime()) / 86400000);
   if (diff < 0) return { label: `Vencido há ${Math.abs(diff)} dia${Math.abs(diff) !== 1 ? 's' : ''}`, variant: 'danger' };
   if (diff === 0) return { label: 'Vence hoje', variant: 'warning' };
@@ -33,7 +43,7 @@ function buildWhatsAppLink(phone: string, name: string, total: number, dueDate?:
   const digits = phone.replace(/\D/g, '');
   const number = digits.startsWith('55') ? digits : `55${digits}`;
   const due = dueDate
-    ? ` com vencimento em ${new Date(dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}`
+    ? ` com vencimento em ${formatDueDate(dueDate)}`
     : '';
   const msg = `Olá ${name}! Você possui um saldo em aberto de ${formatCurrency(total)} no nosso mercado${due}. Por favor, entre em contato para realizar o pagamento. Obrigado!`;
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
@@ -183,7 +193,7 @@ export function DebtorList({ sales }: DebtorListProps) {
                         <p className="font-mono text-xs text-gray-400">{sale.id.slice(0, 14)}…</p>
                         <p className="text-xs text-gray-500 mt-0.5">{formatDate(sale.createdAt)} · {sale.items.length} item{sale.items.length !== 1 ? 's' : ''}</p>
                         {sale.dueDate && (
-                          <p className="text-xs text-gray-400">Venc.: {new Date(sale.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                          <p className="text-xs text-gray-400">Venc.: {formatDueDate(sale.dueDate!)}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">

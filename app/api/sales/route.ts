@@ -10,13 +10,17 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { items, total, paymentMethod } = await req.json();
+  const { items, total, paymentMethod, customerName, customerPhone, dueDate, customerId } = await req.json();
 
   const sale = await prisma.$transaction(async (tx) => {
     const created = await tx.sale.create({
       data: {
         total,
         paymentMethod,
+        ...(customerName && { customerName }),
+        ...(customerPhone && { customerPhone }),
+        ...(dueDate && { dueDate: new Date(dueDate) }),
+        ...(customerId && { customerId }),
         items: {
           create: items.map((item: {
             productId: string;

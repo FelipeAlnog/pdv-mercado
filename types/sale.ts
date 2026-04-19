@@ -17,6 +17,8 @@ export interface Sale {
   customerName?: string;
   customerPhone?: string;
   dueDate?: string;
+  paidAt?: string;
+  customerId?: string;
   createdAt: string;
 }
 
