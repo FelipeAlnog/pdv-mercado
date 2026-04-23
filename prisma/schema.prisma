@@ -6,18 +6,99 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+// ==================== AUTH MODELS ====================
 
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  sessionToken String?   @unique
+  expiresAt    DateTime
+  token        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  ipAddress    String?
+  userAgent    String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  name          String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  image         String?
+  phone         String?
+  paymentCustomerId String?
+
+  emailVerified Boolean      
+  accounts      Account[]
+ 
+  store             Store?
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Account {
+  userId                String
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  accessToken           String?
+  accessTokenExpiresAt  DateTime?
+  accountId             String
+  idToken               String?
+  providerId            String
+  refreshToken          String?
+  refreshTokenExpiresAt DateTime?
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([providerId, accountId])
+}
+model Store {
+  id            String     @id @default(uuid())
+  name          String
+  ownerId       String     @unique
+  cpf           String     @unique
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  address       String?    @default("")
+  phone         String?    @default("")
+  // billing
+  plan          Plan?       @default(FREE)
+  planExpiresAt DateTime?
+  customers     Customer[]
+  sales         Sale[]
+  payments      Payment[]
+  saleItem     SaleItem[]
+  product      Product[]
+  owner         User       @relation(fields: [ownerId], references: [id])
+}
 model Product {
   id        String     @id @default(cuid())
   name      String
   price     Float
-  barcode   String     @unique
+  barcode   String
   stock     Int
   minStock  Int
   category  String
+
+  storeId   String
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   saleItems SaleItem[]
+
+  @@unique([barcode, storeId]) // evita conflito entre lojas
 }
 
 model Customer {
@@ -28,34 +109,106 @@ model Customer {
   cpf       String?  @unique
   address   String?
   notes     String?
+   storeId        String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sales     Sale[]
+  store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }
 
 model Sale {
   id            String    @id @default(cuid())
   total         Float
   paymentMethod String
+   storeId        String
   customerName  String?
   customerPhone String?
   dueDate       DateTime?
   paidAt        DateTime?
   customerId    String?
   customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt     DateTime  @default(now())
   items         SaleItem[]
 }
 
 model SaleItem {
   id          String  @id @default(cuid())
+
   saleId      String
   productId   String
+  storeId     String
+
   productName String
   barcode     String
   quantity    Int
   unitPrice   Float
   subtotal    Float
+
   sale        Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   product     Product @relation(fields: [productId], references: [id])
+  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+model Payment {
+  id String @id @default(uuid())
+
+  // Gateway
+  provider   PaymentProvider @default(ABACATE_PAY)
+  billingId  String?         @unique
+  paymentId  String?         @unique
+  paymentUrl String?
+
+  // Valores
+  amount   Int // centavos
+  currency String? @default("BRL")
+
+  // Status
+  status PaymentStatus @default(PENDING)
+
+  // Método
+  method PaymentMethod?
+
+  // Multi-tenant 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Extras
+  metadata Json?
+  paidAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([billingId])
+  @@index([storeId])
+}
+
+enum PaymentStatus {
+  PENDING // Aguardando pagamento
+  PROCESSING // Processando
+  PAID // Pago
+  FAILED // Falhou
+  CANCELED // Cancelado
+  REFUNDED // Reembolsado
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  BOLETO
+}
+
+enum PaymentProvider {
+  ABACATE_PAY
+  STRIPE
+  MERCADO_PAGO
+}
+
+enum Plan {
+  FREE
+  PRO
 }
