@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
@@ -15,51 +16,40 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock, User, ShoppingCart } from "lucide-react";
+
+type RegisterFormData = {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
 
 export function RegisterForm() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormData>();
 
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem");
-      return;
-    }
+  const password = watch("password");
 
-    if (password.length < 8) {
-      setError("A senha deve ter pelo menos 8 caracteres");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const result = await signUp.email({
-        email,
-        password,
-        name,
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Erro ao criar conta");
-      } else {
-        router.push("/dashboard");
-        router.refresh();
-      }
-    } catch {
-      setError("Ocorreu um erro. Tente novamente.");
-    } finally {
-      setIsLoading(false);
+  async function onSubmit(data: RegisterFormData) {
+    setServerError("");
+    const result = await signUp.email({
+      email: data.email,
+      password: data.password,
+      name: data.name,
+    });
+    if (result.error) {
+      setServerError(result.error.message || "Erro ao criar conta");
+    } else {
+      router.push("/dashboard");
+      router.refresh();
     }
   }
 
@@ -74,14 +64,16 @@ export function RegisterForm() {
           Preencha os dados abaixo para criar sua conta no PDV
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+
+      <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4 pb-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+          {serverError && (
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
+              {serverError}
+            </p>
           )}
-          <div className="space-y-2">
+
+          <div className="space-y-1.5">
             <Label htmlFor="name">Nome</Label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -89,15 +81,17 @@ export function RegisterForm() {
                 id="name"
                 type="text"
                 placeholder="Seu nome completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
                 className="pl-10"
-                required
-                disabled={isLoading}
+                disabled={isSubmitting}
+                {...register("name", { required: "Nome obrigatório" })}
               />
             </div>
+            {errors.name && (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            )}
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -105,15 +99,23 @@ export function RegisterForm() {
                 id="email"
                 type="email"
                 placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 className="pl-10"
-                required
-                disabled={isLoading}
+                disabled={isSubmitting}
+                {...register("email", {
+                  required: "Email obrigatório",
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: "Email inválido",
+                  },
+                })}
               />
             </div>
+            {errors.email && (
+              <p className="text-xs text-destructive">{errors.email.message}</p>
+            )}
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-1.5">
             <Label htmlFor="password">Senha</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -121,18 +123,20 @@ export function RegisterForm() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 className="pl-10"
-                required
-                disabled={isLoading}
+                disabled={isSubmitting}
+                {...register("password", {
+                  required: "Senha obrigatória",
+                  minLength: { value: 8, message: "Mínimo de 8 caracteres" },
+                })}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Mínimo de 8 caracteres
-            </p>
+            {errors.password && (
+              <p className="text-xs text-destructive">{errors.password.message}</p>
+            )}
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-1.5">
             <Label htmlFor="confirmPassword">Confirmar Senha</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -140,18 +144,25 @@ export function RegisterForm() {
                 id="confirmPassword"
                 type="password"
                 placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="pl-10"
-                required
-                disabled={isLoading}
+                disabled={isSubmitting}
+                {...register("confirmPassword", {
+                  required: "Confirmação obrigatória",
+                  validate: (v) => v === password || "As senhas não coincidem",
+                })}
               />
             </div>
+            {errors.confirmPassword && (
+              <p className="text-xs text-destructive">
+                {errors.confirmPassword.message}
+              </p>
+            )}
           </div>
         </CardContent>
+
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Criando conta...
@@ -162,10 +173,7 @@ export function RegisterForm() {
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             Já tem uma conta?{" "}
-            <Link
-              href="/login"
-              className="font-medium text-primary hover:underline"
-            >
+            <Link href="/login" className="font-medium text-primary hover:underline">
               Entrar
             </Link>
           </p>

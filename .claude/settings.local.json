@@ -17,7 +17,14 @@
       "Bash(taskkill /F /IM node.exe)",
       "Bash(taskkill /PID 16408 /F)",
       "Bash(cmd.exe:*)",
-      "Bash(grep -E \"\\\\.\\(js|ts|json\\)$\")"
+      "Bash(grep -E \"\\\\.\\(js|ts|json\\)$\")",
+      "Bash(npm install:*)",
+      "Bash(npm list:*)",
+      "Bash(npm show:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

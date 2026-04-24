@@ -20,6 +20,18 @@ export const auth = betterAuth({
     autoSignIn: false,
   },
 
+  // Google OAuth — ative adicionando GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env
+  // Crie as credenciais em: https://console.cloud.google.com/apis/credentials
+  ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ? {
+        socialProviders: {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        },
+      }
+    : {}),
 
   session: {
 

@@ -1,37 +1,7 @@
-import type React from "react";
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "../globals.css";
-import { ThemeProvider } from "@/components/layout/theme-provider";
-import { Toaster } from "@/components/ui/toaster";
-
-
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: 'PDV Mercado',
-  description: 'Sistema de Ponto de Venda para pequenos mercados',
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning className="">
-      <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        
-          <Toaster />
-        </ThemeProvider>
-      </body>
-    </html>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      {children}
+    </div>
   );
 }
