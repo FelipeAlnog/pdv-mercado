@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireAuth } from '@/lib/api-auth';
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { auth, error } = await requireAuth(req);
+  if (error) return error;
+
   const { id } = await params;
-  const customer = await prisma.customer.findUnique({ where: { id } });
+  const customer = await prisma.customer.findUnique({ where: { id, storeId: auth.storeId } });
   if (!customer) return NextResponse.json({ error: 'Cliente não encontrado.' }, { status: 404 });
   return NextResponse.json(customer);
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { auth, error } = await requireAuth(req);
+  if (error) return error;
+
   const { id } = await params;
   const { name, phone, email, cpf, address, notes } = await req.json();
 
@@ -18,7 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (cpf?.trim()) {
     const existing = await prisma.customer.findFirst({
-      where: { cpf: cpf.trim(), NOT: { id } },
+      where: { cpf: cpf.trim(), storeId: auth.storeId, NOT: { id } },
     });
     if (existing) {
       return NextResponse.json({ error: 'CPF já cadastrado.' }, { status: 409 });
@@ -26,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const customer = await prisma.customer.update({
-    where: { id },
+    where: { id, storeId: auth.storeId },
     data: {
       ...(name !== undefined && { name: name.trim() }),
       ...(phone !== undefined && { phone: phone.trim() || null }),
@@ -40,11 +47,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   return NextResponse.json(customer);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { auth, error } = await requireAuth(req);
+  if (error) return error;
+
   const { id } = await params;
 
   const pendingSales = await prisma.sale.count({
-    where: { customerId: id, paymentMethod: 'pending', paidAt: null },
+    where: { customerId: id, storeId: auth.storeId, paymentMethod: 'pending', paidAt: null },
   });
 
   if (pendingSales > 0) {
@@ -54,6 +64,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     );
   }
 
-  await prisma.customer.delete({ where: { id } });
+  await prisma.customer.delete({ where: { id, storeId: auth.storeId } });
   return new NextResponse(null, { status: 204 });
 }

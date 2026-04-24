@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { auth, error } = await requireAuth(req);
+  if (error) return error;
+
   const { id } = await params;
   const updates = await req.json();
 
@@ -13,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (updates.paymentMethod !== undefined) data.paymentMethod = updates.paymentMethod;
 
   const sale = await prisma.sale.update({
-    where: { id },
+    where: { id, storeId: auth.storeId },
     data,
     include: { items: true },
   });
