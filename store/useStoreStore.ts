@@ -16,6 +16,7 @@ export interface StoreData {
 interface StoreState {
   store: StoreData | null;
   loadingState: LoadingState;
+  reset: () => void;
   fetchStore: () => Promise<void>;
   updateStore: (data: Partial<Pick<StoreData, 'name' | 'phone' | 'address' | 'logo'>>) => Promise<void>;
 }
@@ -23,6 +24,8 @@ interface StoreState {
 export const useStoreStore = create<StoreState>((set) => ({
   store: null,
   loadingState: 'idle',
+
+  reset: () => set({ store: null, loadingState: 'idle' }),
 
   fetchStore: async () => {
     set({ loadingState: 'loading' });

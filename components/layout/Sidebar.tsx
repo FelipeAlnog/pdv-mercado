@@ -68,8 +68,11 @@ export function Sidebar() {
   const showLabels = !collapsed || mobileOpen;
 
   useEffect(() => {
-    if (loadingState === 'idle') fetchStore();
-  }, [loadingState, fetchStore]);
+    // Busca se nunca carregou OU se o store foi resetado (troca de usuário — proteção LGPD)
+    if (loadingState === 'idle' || (!store && loadingState !== 'loading')) {
+      fetchStore();
+    }
+  }, [loadingState, store, fetchStore]);
 
   const storeName = store?.name ?? 'PDV Mercado';
   const storeLogo = store?.logo ?? null;

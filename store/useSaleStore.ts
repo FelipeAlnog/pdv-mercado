@@ -10,6 +10,7 @@ interface SaleState {
   sales: Sale[];
   loadingState: LoadingState;
 
+  reset: () => void;
   fetchSales: () => Promise<void>;
   createSale: (data: SaleFormData) => Promise<Sale>;
   updateSale: (id: string, updates: Partial<Sale>) => Promise<Sale>;
@@ -23,6 +24,8 @@ interface SaleState {
 export const useSaleStore = create<SaleState>((set, get) => ({
   sales: [],
   loadingState: 'idle',
+
+  reset: () => set({ sales: [], loadingState: 'idle' }),
 
   fetchSales: async () => {
     set({ loadingState: 'loading' });

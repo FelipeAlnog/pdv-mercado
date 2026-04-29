@@ -9,6 +9,7 @@ interface CustomerState {
   customers: Customer[];
   loadingState: LoadingState;
 
+  reset: () => void;
   fetchCustomers: () => Promise<void>;
   createCustomer: (data: CustomerFormData) => Promise<Customer>;
   updateCustomer: (id: string, data: Partial<CustomerFormData>) => Promise<Customer>;
@@ -18,6 +19,8 @@ interface CustomerState {
 export const useCustomerStore = create<CustomerState>((set) => ({
   customers: [],
   loadingState: 'idle',
+
+  reset: () => set({ customers: [], loadingState: 'idle' }),
 
   fetchCustomers: async () => {
     set({ loadingState: 'loading' });

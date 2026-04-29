@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { signOut } from '@/lib/auth-client';
 import { useStoreStore } from '@/store/useStoreStore';
+import { resetAllStores } from '@/store/resetAllStores';
 import { cn } from '@/lib/utils';
 import { X, LogOut, Camera, Building2, Phone, MapPin, CreditCard, Loader2 } from 'lucide-react';
 
@@ -88,6 +89,8 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   async function handleSignOut() {
     setSigningOut(true);
     try {
+      // Limpa todos os stores ANTES de redirecionar (proteção LGPD)
+      resetAllStores();
       await signOut();
       router.push('/login');
       router.refresh();
