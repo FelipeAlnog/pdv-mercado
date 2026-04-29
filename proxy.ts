@@ -2,11 +2,20 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
-const PUBLIC_ROUTES = ["/", "/login", "/register"];
+const PUBLIC_ROUTES = new Set(["/", "/login", "/register", "/setup"]);
+
+function isPublicRoute(pathname: string): boolean {
+  if (PUBLIC_ROUTES.has(pathname)) return true;
+  for (const route of PUBLIC_ROUTES) {
+    if (route !== "/" && pathname.startsWith(route + "/")) return true;
+  }
+  return false;
+}
 
 export function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
+  const { pathname } = request.nextUrl;
 
+  // Pass-through: API, static assets, and Next.js internals
   if (
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
@@ -17,15 +26,15 @@ export function proxy(request: NextRequest) {
 
   const sessionCookie = getSessionCookie(request);
   const isLoggedIn = !!sessionCookie;
-  const isPublicRoute = PUBLIC_ROUTES.some((r) =>
-    r === "/" ? pathname === "/" : pathname.startsWith(r)
-  );
 
-  if (!isLoggedIn && !isPublicRoute) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (!isLoggedIn && !isPublicRoute(pathname)) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  if (isLoggedIn && pathname.startsWith("/login")) {
+  // Redirect logged-in users away from auth pages (but NOT from /setup)
+  if (isLoggedIn && (pathname === "/login" || pathname === "/register")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

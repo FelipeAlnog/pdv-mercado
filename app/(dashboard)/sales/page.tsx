@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Header } from "@/components/layout/Header";
+import { usePageHeader } from "@/hooks/usePageHeader";
+import { ExportMenu } from "@/components/ui/ExportMenu";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { BarcodeInput } from "@/features/sales/components/BarcodeInput";
@@ -13,7 +14,13 @@ import { useProductStore } from "@/store/useProductStore";
 import { useCartStore } from "@/store/useCartStore";
 import { useSaleStore } from "@/store/useSaleStore";
 import { Product, ProductFormData } from "@/types/product";
+import { exportToExcel, exportToPDF } from "@/lib/export";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 import { cn } from "@/lib/utils";
+
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: 'Dinheiro', card: 'Cartão', pix: 'PIX', pending: 'Fiado',
+};
 
 export default function SalesPage() {
   const { fetchProducts, createProduct } = useProductStore();
@@ -51,30 +58,57 @@ export default function SalesPage() {
     }
   }
 
+  const SALE_HEADERS = ['Data', 'Cliente', 'Itens', 'Total', 'Pagamento', 'Status'];
+
+  function getSaleRows() {
+    return sales.map((s) => [
+      formatDate(s.createdAt),
+      s.customerName ?? '—',
+      s.items.map((i) => `${i.quantity}x ${i.productName}`).join(', '),
+      formatCurrency(s.total),
+      PAYMENT_LABELS[s.paymentMethod] ?? s.paymentMethod,
+      s.paidAt ? 'Pago' : s.paymentMethod === 'pending' ? 'Pendente' : 'Concluído',
+    ]);
+  }
+
+  function handleExportExcel() {
+    const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    exportToExcel(`vendas-${date}`, SALE_HEADERS, getSaleRows(), 'Vendas');
+  }
+
+  function handleExportPDF() {
+    const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    exportToPDF('Relatório de Vendas', SALE_HEADERS, getSaleRows(), `vendas-${date}`, true);
+  }
+
+  usePageHeader({
+    title: "Vendas",
+    subtitle: "PDV — Ponto de Venda",
+    actions: (
+      <div className="flex items-center gap-2">
+        <ExportMenu onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} disabled={sales.length === 0} />
+        <div className="flex overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+          {(["pdv", "history"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "px-4 py-2 cursor-pointer text-sm font-medium transition-colors",
+                activeTab === tab
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              {tab === "pdv" ? "PDV" : "Histórico"}
+            </button>
+          ))}
+        </div>
+      </div>
+    ),
+  });
+
   return (
     <div className="space-y-6">
-      <Header
-        title="Vendas"
-        subtitle="PDV — Ponto de Venda"
-        actions={
-          <div className="flex overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-            {(["pdv", "history"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "px-4 py-2 cursor-pointer text-sm font-medium transition-colors",
-                  activeTab === tab
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                {tab === "pdv" ? "PDV" : "Histórico"}
-              </button>
-            ))}
-          </div>
-        }
-      />
 
       {activeTab === "pdv" ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

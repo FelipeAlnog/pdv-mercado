@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Customer, CustomerFormData } from '@/types/customer';
 import { Sale } from '@/types/sale';
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import {
   Table,
   TableBody,
@@ -20,7 +21,17 @@ import {
 } from '@/components/ui/table';
 import { CustomerForm } from './CustomerForm';
 import { formatCurrency, formatDateShort } from '@/utils/formatters';
-import { Pencil, Trash2, Users, Phone, ChevronDown, ChevronUp, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import {
+  Pencil,
+  Trash2,
+  Users,
+  Phone,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+} from 'lucide-react';
 
 interface CustomerListProps {
   customers: Customer[];
@@ -37,7 +48,7 @@ function getInitials(name: string) {
 
 function CustomerDebtDetail({ sales }: { sales: Sale[] }) {
   const pending = sales.filter((s) => s.paymentMethod === 'pending' && !s.paidAt);
-  const paid = sales.filter((s) => s.paymentMethod === 'pending' && s.paidAt);
+  const paid    = sales.filter((s) => s.paymentMethod === 'pending' && s.paidAt);
 
   if (sales.length === 0) {
     return (
@@ -108,10 +119,30 @@ function CustomerDebtDetail({ sales }: { sales: Sale[] }) {
 export function CustomerList({ customers }: CustomerListProps) {
   const { updateCustomer, deleteCustomer } = useCustomerStore();
   const { sales } = useSaleStore();
-  const [editing, setEditing] = useState<Customer | null>(null);
-  const [deleting, setDeleting] = useState<Customer | null>(null);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [editing, setEditing]             = useState<Customer | null>(null);
+  const [deleting, setDeleting]           = useState<Customer | null>(null);
+  const [expanded, setExpanded]           = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState(false);
+
+  const [page, setPage]         = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset to page 1 and close expanded row whenever the filtered set changes
+  const filterKey = customers.map((c) => c.id).join(',');
+  useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
+    setPage(1);
+    setExpanded(null);
+  }, [filterKey]);
+
+  // Also close expanded row on page change
+  function handlePage(p: number) {
+    setPage(p);
+    setExpanded(null);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(customers.length / pageSize));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = customers.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   function getCustomerSales(customerId: string): Sale[] {
     return sales.filter((s) => s.customerId === customerId && s.paymentMethod === 'pending');
@@ -132,8 +163,8 @@ export function CustomerList({ customers }: CustomerListProps) {
 
   function statusBadge(customerId: string) {
     const debt = getPendingDebt(customerId);
-    if (debt === 0) return <Badge variant="success">Regular</Badge>;
-    if (isOverdue(customerId)) return <Badge variant="danger">Inadimplente</Badge>;
+    if (debt === 0)               return <Badge variant="success">Regular</Badge>;
+    if (isOverdue(customerId))    return <Badge variant="danger">Inadimplente</Badge>;
     return <Badge variant="warning">Fiado em aberto</Badge>;
   }
 
@@ -181,17 +212,14 @@ export function CustomerList({ customers }: CustomerListProps) {
 
   return (
     <>
-      {/* Mobile cards */}
+      {/* ── Mobile cards ─────────────────────────────────────────────────── */}
       <div className="space-y-3 md:hidden">
-        {customers.map((customer) => {
-          const debt = getPendingDebt(customer.id);
+        {paginated.map((customer) => {
+          const debt          = getPendingDebt(customer.id);
           const customerSales = getCustomerSales(customer.id);
-          const isOpen = expanded === customer.id;
+          const isOpen        = expanded === customer.id;
           return (
-            <div
-              key={customer.id}
-              className="rounded-xl border border-border bg-card shadow-sm"
-            >
+            <div key={customer.id} className="rounded-xl border border-border bg-card shadow-sm">
               <div className="flex items-start gap-3 p-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white">
                   {getInitials(customer.name)}
@@ -231,7 +259,7 @@ export function CustomerList({ customers }: CustomerListProps) {
                 <>
                   <button
                     onClick={() => setExpanded(isOpen ? null : customer.id)}
-                    className="flex w-full items-center justify-between border-t border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/40"
+                    className="flex w-full cursor-pointer items-center justify-between border-t border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/40"
                   >
                     <span>Histórico de fiado ({customerSales.length})</span>
                     {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -248,32 +276,36 @@ export function CustomerList({ customers }: CustomerListProps) {
         })}
       </div>
 
-      {/* Desktop table */}
-      <div className="hidden md:block overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* ── Desktop table ─────────────────────────────────────────────────── */}
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:block">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-xs font-semibold uppercase tracking-wide">Cliente</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wide">Contato</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wide">CPF</TableHead>
-              <TableHead className="text-right text-xs font-semibold uppercase tracking-wide">Fiado em aberto</TableHead>
+              <TableHead className="text-right text-xs font-semibold uppercase tracking-wide">
+                Fiado em aberto
+              </TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wide">Status</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wide">Cadastro</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {customers.map((customer) => {
-              const debt = getPendingDebt(customer.id);
+            {paginated.map((customer) => {
+              const debt          = getPendingDebt(customer.id);
               const customerSales = getCustomerSales(customer.id);
-              const isOpen = expanded === customer.id;
-              const overdue = isOverdue(customer.id);
+              const isOpen        = expanded === customer.id;
+              const overdue       = isOverdue(customer.id);
 
               return (
                 <React.Fragment key={customer.id}>
                   <TableRow
                     className="cursor-pointer"
-                    onClick={() => customerSales.length > 0 && setExpanded(isOpen ? null : customer.id)}
+                    onClick={() =>
+                      customerSales.length > 0 && setExpanded(isOpen ? null : customer.id)
+                    }
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -283,7 +315,9 @@ export function CustomerList({ customers }: CustomerListProps) {
                         <div>
                           <p className="font-medium">{customer.name}</p>
                           {customer.address && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[180px]">{customer.address}</p>
+                            <p className="max-w-[180px] truncate text-xs text-muted-foreground">
+                              {customer.address}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -308,7 +342,7 @@ export function CustomerList({ customers }: CustomerListProps) {
                       {debt > 0 ? (
                         <div className="flex items-center justify-end gap-1.5">
                           {overdue && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
-                          <span className={debt > 0 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}>
+                          <span className="font-semibold text-amber-600 dark:text-amber-400">
                             {formatCurrency(debt)}
                           </span>
                         </div>
@@ -329,7 +363,11 @@ export function CustomerList({ customers }: CustomerListProps) {
                             onClick={() => setExpanded(isOpen ? null : customer.id)}
                             aria-label="Ver histórico"
                           >
-                            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {isOpen ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
                           </Button>
                         )}
                         <Button
@@ -370,6 +408,16 @@ export function CustomerList({ customers }: CustomerListProps) {
         </Table>
       </div>
 
+      {/* ── Pagination ───────────────────────────────────────────────────── */}
+      <Pagination
+        total={customers.length}
+        page={safePage}
+        pageSize={pageSize}
+        onPage={handlePage}
+        onPageSize={setPageSize}
+      />
+
+      {/* ── Modals ───────────────────────────────────────────────────────── */}
       <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar cliente" size="lg">
         {editing && (
           <CustomerForm

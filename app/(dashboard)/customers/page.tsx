@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Header } from "@/components/layout/Header";
+import { usePageHeader } from "@/hooks/usePageHeader";
+import { ExportMenu } from "@/components/ui/ExportMenu";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,8 @@ import {
   DollarSign,
   Search,
 } from "lucide-react";
-import { formatCurrency } from "@/utils/formatters";
+import { formatCurrency, formatDateShort } from "@/utils/formatters";
+import { exportToExcel, exportToPDF } from "@/lib/export";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | "debtors" | "overdue";
@@ -113,18 +115,45 @@ export default function CustomersPage() {
     { value: "overdue", label: "Inadimplentes" },
   ];
 
+  const CUST_HEADERS = ['Nome', 'Telefone', 'Email', 'CPF', 'Endereço', 'Cadastrado em'];
+
+  function getCustomerRows() {
+    return customers.map((c) => [
+      c.name,
+      c.phone ?? '—',
+      c.email ?? '—',
+      c.cpf ?? '—',
+      c.address ?? '—',
+      formatDateShort(c.createdAt),
+    ]);
+  }
+
+  function handleExportExcel() {
+    const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    exportToExcel(`clientes-${date}`, CUST_HEADERS, getCustomerRows(), 'Clientes');
+  }
+
+  function handleExportPDF() {
+    const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    exportToPDF('Relatório de Clientes', CUST_HEADERS, getCustomerRows(), `clientes-${date}`, true);
+  }
+
+  usePageHeader({
+    title: "Clientes",
+    subtitle: "Cadastro e controle de clientes",
+    actions: (
+      <div className="flex items-center gap-2">
+        <ExportMenu onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} disabled={customers.length === 0} />
+        <Button onClick={() => setShowCreate(true)}>
+          <UserPlus className="h-4 w-4" />
+          Novo cliente
+        </Button>
+      </div>
+    ),
+  });
+
   return (
     <div className="space-y-6">
-      <Header
-        title="Clientes"
-        subtitle="Cadastro e controle de clientes"
-        actions={
-          <Button onClick={() => setShowCreate(true)}>
-            <UserPlus className="h-4 w-4" />
-            Novo cliente
-          </Button>
-        }
-      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

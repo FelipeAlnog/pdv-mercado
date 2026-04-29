@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api-auth';
+import { parseBody, createCustomerSchema } from '@/lib/validation/schemas';
+import { handlePrismaError } from '@/lib/prisma-errors';
 
 export async function GET(req: NextRequest) {
   const { auth, error } = await requireAuth(req);
@@ -21,16 +23,16 @@ export async function POST(req: NextRequest) {
   const { auth, error } = await requireAuth(req);
   if (error) return error;
 
-  const { name, phone, email, cpf, address, notes } = await req.json();
-
-  if (!name?.trim()) {
-    return NextResponse.json({ error: 'Nome é obrigatório.' }, { status: 400 });
-  }
+  const { data, error: bodyError } = await parseBody(req, createCustomerSchema);
+  if (bodyError) return bodyError;
 
   try {
-    if (cpf?.trim()) {
+    const cpf = data.cpf?.trim() || null;
+
+    if (cpf) {
       const existing = await prisma.customer.findFirst({
-        where: { cpf: cpf.trim(), storeId: auth.storeId },
+        where: { cpf, storeId: auth.storeId },
+        select: { id: true },
       });
       if (existing) {
         return NextResponse.json({ error: 'CPF já cadastrado.' }, { status: 409 });
@@ -40,17 +42,17 @@ export async function POST(req: NextRequest) {
     const customer = await prisma.customer.create({
       data: {
         storeId: auth.storeId,
-        name: name.trim(),
-        phone: phone?.trim() || null,
-        email: email?.trim() || null,
-        cpf: cpf?.trim() || null,
-        address: address?.trim() || null,
-        notes: notes?.trim() || null,
+        name:    data.name.trim(),
+        phone:   data.phone?.trim() || null,
+        email:   data.email?.trim() || null,
+        cpf,
+        address: data.address?.trim() || null,
+        notes:   data.notes?.trim() || null,
       },
     });
 
     return NextResponse.json(customer, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Erro ao criar cliente.' }, { status: 500 });
+  } catch (e) {
+    return handlePrismaError(e, 'cliente');
   }
 }

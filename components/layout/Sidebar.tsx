@@ -82,7 +82,7 @@ export function Sidebar() {
       {/* Mobile backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 cursor-pointer bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={closeMobile}
         />
       )}
@@ -90,7 +90,7 @@ export function Sidebar() {
       {/* Sidebar panel */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-slate-900',
+          'fixed inset-y-0 left-0 z-50 flex w-60 flex-col border border-border bg-card shadow-sm dark:bg-slate-900',
           'transition-[width,transform] duration-300 ease-in-out',
           'lg:relative lg:z-auto lg:translate-x-0',
           collapsed ? 'lg:w-[70px] ' : 'lg:w-60',
@@ -123,7 +123,7 @@ export function Sidebar() {
 
           {showLabels && (
             <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="truncate text-sm font-semibold text-white">{storeName}</p>
+              <p className="truncate text-sm font-semibold dark:text-white">{storeName}</p>
               <p className="truncate text-xs text-slate-500">Sistema de Vendas</p>
             </div>
           )}
@@ -179,7 +179,7 @@ export function Sidebar() {
             onClick={toggleDark}
             title={!showLabels ? (isDark ? 'Modo Claro' : 'Modo Escuro') : undefined}
             className={cn(
-              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200',
+              'flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200',
               !showLabels && 'justify-center'
             )}
           >
@@ -200,7 +200,7 @@ export function Sidebar() {
             onClick={() => setSettingsOpen(true)}
             title={!showLabels ? 'Configurações' : undefined}
             className={cn(
-              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200',
+              'flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200',
               !showLabels && 'justify-center'
             )}
           >
@@ -213,7 +213,7 @@ export function Sidebar() {
             onClick={toggleCollapsed}
             title={collapsed ? 'Expandir menu' : undefined}
             className={cn(
-              'hidden lg:flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200',
+              'hidden lg:flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200',
               !showLabels && 'justify-center'
             )}
           >

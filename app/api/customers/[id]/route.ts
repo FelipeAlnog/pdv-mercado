@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api-auth';
+import { parseBody, updateCustomerSchema } from '@/lib/validation/schemas';
+import { handlePrismaError } from '@/lib/prisma-errors';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(req: NextRequest, { params }: RouteContext) {
   const { auth, error } = await requireAuth(req);
   if (error) return error;
 
   try {
     const { id } = await params;
-    const customer = await prisma.customer.findUnique({ where: { id, storeId: auth.storeId } });
+    const customer = await prisma.customer.findUnique({
+      where: { id, storeId: auth.storeId },
+    });
     if (!customer) return NextResponse.json({ error: 'Cliente não encontrado.' }, { status: 404 });
     return NextResponse.json(customer);
   } catch {
@@ -16,21 +22,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { auth, error } = await requireAuth(req);
   if (error) return error;
 
+  const { data, error: bodyError } = await parseBody(req, updateCustomerSchema);
+  if (bodyError) return bodyError;
+
   try {
     const { id } = await params;
-    const { name, phone, email, cpf, address, notes } = await req.json();
+    const cpf = data.cpf !== undefined ? (data.cpf?.trim() || null) : undefined;
 
-    if (name !== undefined && !name?.trim()) {
-      return NextResponse.json({ error: 'Nome é obrigatório.' }, { status: 400 });
-    }
-
-    if (cpf?.trim()) {
+    if (cpf) {
       const existing = await prisma.customer.findFirst({
-        where: { cpf: cpf.trim(), storeId: auth.storeId, NOT: { id } },
+        where: { cpf, storeId: auth.storeId, NOT: { id } },
+        select: { id: true },
       });
       if (existing) {
         return NextResponse.json({ error: 'CPF já cadastrado.' }, { status: 409 });
@@ -40,26 +46,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const customer = await prisma.customer.update({
       where: { id, storeId: auth.storeId },
       data: {
-        ...(name !== undefined && { name: name.trim() }),
-        ...(phone !== undefined && { phone: phone.trim() || null }),
-        ...(email !== undefined && { email: email.trim() || null }),
-        ...(cpf !== undefined && { cpf: cpf.trim() || null }),
-        ...(address !== undefined && { address: address.trim() || null }),
-        ...(notes !== undefined && { notes: notes.trim() || null }),
+        ...(data.name    !== undefined && { name:    data.name?.trim() }),
+        ...(data.phone   !== undefined && { phone:   data.phone?.trim() || null }),
+        ...(data.email   !== undefined && { email:   data.email?.trim() || null }),
+        ...(cpf          !== undefined && { cpf }),
+        ...(data.address !== undefined && { address: data.address?.trim() || null }),
+        ...(data.notes   !== undefined && { notes:   data.notes?.trim() || null }),
       },
     });
 
     return NextResponse.json(customer);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '';
-    if (msg.includes('Record to update not found')) {
-      return NextResponse.json({ error: 'Cliente não encontrado.' }, { status: 404 });
-    }
-    return NextResponse.json({ error: 'Erro ao atualizar cliente.' }, { status: 500 });
+  } catch (e) {
+    return handlePrismaError(e, 'cliente');
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const { auth, error } = await requireAuth(req);
   if (error) return error;
 
@@ -79,11 +81,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     await prisma.customer.delete({ where: { id, storeId: auth.storeId } });
     return new NextResponse(null, { status: 204 });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '';
-    if (msg.includes('Record to delete does not exist')) {
-      return NextResponse.json({ error: 'Cliente não encontrado.' }, { status: 404 });
-    }
-    return NextResponse.json({ error: 'Erro ao excluir cliente.' }, { status: 500 });
+  } catch (e) {
+    return handlePrismaError(e, 'cliente');
   }
 }

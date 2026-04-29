@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
 import { SessionGuard } from '@/components/layout/SessionGuard';
+import { PageTransition } from '@/components/layout/PageTransition';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -25,7 +27,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <TopBar />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-screen-xl p-4 sm:p-6 lg:p-8">
-            {children}
+            <PageHeader />
+            <PageTransition>
+              {children}
+            </PageTransition>
           </div>
         </main>
       </div>

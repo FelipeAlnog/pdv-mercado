@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { CartItem } from '@/types/sale';
 import { useCartStore } from '@/store/useCartStore';
 import { formatCurrency } from '@/utils/formatters';
@@ -31,7 +32,17 @@ export function CartItemRow({ item }: CartItemRowProps) {
         >
           <Minus />
         </Button>
-        <span className="w-8 text-center text-sm font-bold">{item.quantity}</span>
+
+        <motion.span
+          key={item.quantity}
+          initial={{ scale: 1.4, opacity: 0 }}
+          animate={{ scale: 1,   opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+          className="w-8 text-center text-sm font-bold"
+        >
+          {item.quantity}
+        </motion.span>
+
         <Button
           variant="outline"
           size="icon-xs"
@@ -44,7 +55,15 @@ export function CartItemRow({ item }: CartItemRowProps) {
 
       {/* Price */}
       <div className="min-w-20 text-right">
-        <p className="text-sm font-semibold">{formatCurrency(item.subtotal)}</p>
+        <motion.p
+          key={item.subtotal}
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15 }}
+          className="text-sm font-semibold"
+        >
+          {formatCurrency(item.subtotal)}
+        </motion.p>
         <p className="text-xs text-muted-foreground">{formatCurrency(item.unitPrice)} / un</p>
       </div>
 

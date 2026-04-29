@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Header } from '@/components/layout/Header';
+import { usePageHeader } from '@/hooks/usePageHeader';
 import { DebtorList } from '@/features/debtors/components/DebtorList';
 import { Spinner } from '@/components/ui/Spinner';
 import { useSaleStore } from '@/store/useSaleStore';
@@ -42,12 +42,13 @@ export default function DebtorsPage() {
     );
   }
 
+  usePageHeader({
+    title: 'A Receber',
+    subtitle: `${uniqueCustomers} cliente${uniqueCustomers !== 1 ? 's' : ''} com saldo pendente`,
+  });
+
   return (
     <div className="space-y-6">
-      <Header
-        title="A Receber"
-        subtitle={`${uniqueCustomers} cliente${uniqueCustomers !== 1 ? 's' : ''} com saldo pendente`}
-      />
 
       {/* Summary */}
       {pendingSales.length > 0 && (

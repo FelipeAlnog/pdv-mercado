@@ -1,39 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/api-auth';
+import { parseBody, updateSaleSchema } from '@/lib/validation/schemas';
+import { handlePrismaError } from '@/lib/prisma-errors';
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { auth, error } = await requireAuth(req);
   if (error) return error;
 
-  const { id } = await params;
-  const updates = await req.json();
-
-  const data: Record<string, unknown> = {};
-  if (updates.paidAt !== undefined) data.paidAt = updates.paidAt ? new Date(updates.paidAt) : null;
-  if (updates.dueDate !== undefined) data.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
-  if (updates.customerName !== undefined) data.customerName = updates.customerName;
-  if (updates.customerPhone !== undefined) data.customerPhone = updates.customerPhone;
-  if (updates.paymentMethod !== undefined) data.paymentMethod = updates.paymentMethod;
+  const { data, error: bodyError } = await parseBody(req, updateSaleSchema);
+  if (bodyError) return bodyError;
 
   try {
+    const { id } = await params;
+
     const sale = await prisma.sale.update({
       where: { id, storeId: auth.storeId },
-      data,
+      data: {
+        ...(data.paidAt        !== undefined && { paidAt:        data.paidAt ? new Date(data.paidAt) : null }),
+        ...(data.dueDate       !== undefined && { dueDate:       data.dueDate ? new Date(data.dueDate) : null }),
+        ...(data.customerName  !== undefined && { customerName:  data.customerName }),
+        ...(data.customerPhone !== undefined && { customerPhone: data.customerPhone }),
+        ...(data.paymentMethod !== undefined && { paymentMethod: data.paymentMethod }),
+      },
       include: { items: true },
     });
 
     return NextResponse.json({
       ...sale,
       createdAt: sale.createdAt.toISOString(),
-      dueDate: sale.dueDate?.toISOString() ?? null,
-      paidAt: sale.paidAt?.toISOString() ?? null,
+      dueDate:   sale.dueDate?.toISOString() ?? null,
+      paidAt:    sale.paidAt?.toISOString() ?? null,
     });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '';
-    if (msg.includes('Record to update not found')) {
-      return NextResponse.json({ error: 'Venda não encontrada.' }, { status: 404 });
-    }
-    return NextResponse.json({ error: 'Erro ao atualizar venda.' }, { status: 500 });
+  } catch (e) {
+    return handlePrismaError(e, 'venda');
   }
 }
