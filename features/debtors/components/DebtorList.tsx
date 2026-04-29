@@ -90,7 +90,7 @@ export function DebtorList({ sales }: DebtorListProps) {
     if (!paying) return;
     setLoadingPay(true);
     try {
-      await updateSale(paying.saleId, { paymentMethod: selectedMethod });
+      await updateSale(paying.saleId, { paymentMethod: selectedMethod, paidAt: new Date().toISOString() });
       toast.success('Venda marcada como paga!');
       setPaying(null);
     } catch {

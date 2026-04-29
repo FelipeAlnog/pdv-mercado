@@ -1,10 +1,14 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Settings } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useSidebarStore } from '@/store/useSidebarStore';
+import { useStoreStore } from '@/store/useStoreStore';
+import { SettingsSheet } from './SettingsSheet';
 
 const navItems = [
   {
@@ -54,16 +58,24 @@ const navItems = [
   },
 ];
 
-interface SidebarProps {
-  onClose?: () => void;
-}
-
-export function Sidebar({ onClose }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname();
   const { isDark, toggle: toggleDark } = useDarkMode();
   const { collapsed, toggleCollapsed, mobileOpen, closeMobile } = useSidebarStore();
+  const { store, loadingState, fetchStore } = useStoreStore();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const showLabels = !collapsed || mobileOpen;
+
+  useEffect(() => {
+    // Busca se nunca carregou OU se o store foi resetado (troca de usuário — proteção LGPD)
+    if (loadingState === 'idle' || (!store && loadingState !== 'loading')) {
+      fetchStore();
+    }
+  }, [loadingState, store, fetchStore]);
+
+  const storeName = store?.name ?? 'PDV Mercado';
+  const storeLogo = store?.logo ?? null;
 
   return (
     <>
@@ -85,21 +97,33 @@ export function Sidebar({ onClose }: SidebarProps) {
           mobileOpen ? 'translate-x-0 ml-0' : '-translate-x-full lg:translate-x-0 lg:ml-5 mt-3 mb-3 rounded-2xl  '
         )}
       >
-        {/* Logo */}
+        {/* Logo / Store identity */}
         <div
           className={cn(
             'flex h-14 shrink-0 items-center border-b border-white/[0.06] px-4',
             showLabels ? 'gap-3' : 'justify-center'
           )}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
+          {/* Logo image or default gradient icon */}
+          <div className="relative shrink-0">
+            {storeLogo ? (
+              <img
+                src={storeLogo}
+                alt={storeName}
+                className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/10"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+            )}
           </div>
+
           {showLabels && (
-            <div className="min-w-0 overflow-hidden">
-              <p className="truncate text-sm font-semibold text-white">PDV Mercado</p>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p className="truncate text-sm font-semibold text-white">{storeName}</p>
               <p className="truncate text-xs text-slate-500">Sistema de Vendas</p>
             </div>
           )}
@@ -171,6 +195,19 @@ export function Sidebar({ onClose }: SidebarProps) {
             {showLabels && <span>{isDark ? 'Modo Claro' : 'Modo Escuro'}</span>}
           </button>
 
+          {/* Settings */}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            title={!showLabels ? 'Configurações' : undefined}
+            className={cn(
+              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200',
+              !showLabels && 'justify-center'
+            )}
+          >
+            <Settings className="h-4 w-4 shrink-0" />
+            {showLabels && <span>Configurações</span>}
+          </button>
+
           {/* Collapse toggle — desktop only */}
           <button
             onClick={toggleCollapsed}
@@ -195,6 +232,9 @@ export function Sidebar({ onClose }: SidebarProps) {
           </button>
         </div>
       </aside>
+
+      {/* Settings sheet — outside aside so it's not clipped */}
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }

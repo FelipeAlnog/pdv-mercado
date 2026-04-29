@@ -12,6 +12,7 @@ interface ProductState {
   error: string | null;
 
   // Actions
+  reset: () => void;
   fetchProducts: () => Promise<void>;
   createProduct: (data: ProductFormData) => Promise<Product>;
   updateProduct: (id: string, data: Partial<ProductFormData>) => Promise<void>;
@@ -26,6 +27,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
   filters: { search: '', category: '', lowStock: false },
   loadingState: 'idle',
   error: null,
+
+  reset: () => set({ products: [], filters: { search: '', category: '', lowStock: false }, loadingState: 'idle', error: null }),
 
   fetchProducts: async () => {
     set({ loadingState: 'loading', error: null });
