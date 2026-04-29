@@ -24,7 +24,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <Sidebar onClose={() => setSidebarOpen(false)} />
+        <Sidebar />
       </div>
 
       {/* Main area */}

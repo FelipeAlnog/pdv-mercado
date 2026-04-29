@@ -72,6 +72,7 @@ model Store {
   updatedAt     DateTime   @updatedAt
   address       String?    @default("")
   phone         String?    @default("")
+  logo          String?    // URL or base64 data URL da logo da loja
   // billing
   plan          Plan?       @default(FREE)
   planExpiresAt DateTime?
