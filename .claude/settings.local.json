@@ -24,7 +24,8 @@
       "Bash(taskkill:*)",
       "Bash(cmd:*)",
       "Bash(powershell:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(git pull:)"
     ]
   }
 }

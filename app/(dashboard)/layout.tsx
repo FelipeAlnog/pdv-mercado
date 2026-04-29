@@ -1,7 +1,20 @@
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect('/login');
+
+  const store = await prisma.store.findUnique({
+    where: { ownerId: session.user.id },
+    select: { id: true },
+  });
+  if (!store) redirect('/setup');
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />

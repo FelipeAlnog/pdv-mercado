@@ -16,16 +16,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (updates.customerPhone !== undefined) data.customerPhone = updates.customerPhone;
   if (updates.paymentMethod !== undefined) data.paymentMethod = updates.paymentMethod;
 
-  const sale = await prisma.sale.update({
-    where: { id, storeId: auth.storeId },
-    data,
-    include: { items: true },
-  });
+  try {
+    const sale = await prisma.sale.update({
+      where: { id, storeId: auth.storeId },
+      data,
+      include: { items: true },
+    });
 
-  return NextResponse.json({
-    ...sale,
-    createdAt: sale.createdAt.toISOString(),
-    dueDate: sale.dueDate?.toISOString() ?? null,
-    paidAt: sale.paidAt?.toISOString() ?? null,
-  });
+    return NextResponse.json({
+      ...sale,
+      createdAt: sale.createdAt.toISOString(),
+      dueDate: sale.dueDate?.toISOString() ?? null,
+      paidAt: sale.paidAt?.toISOString() ?? null,
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('Record to update not found')) {
+      return NextResponse.json({ error: 'Venda não encontrada.' }, { status: 404 });
+    }
+    return NextResponse.json({ error: 'Erro ao atualizar venda.' }, { status: 500 });
+  }
 }

@@ -106,14 +106,16 @@ model Customer {
   name      String
   phone     String?
   email     String?
-  cpf       String?  @unique
+  cpf       String?
   address   String?
   notes     String?
-   storeId        String
+  storeId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sales     Sale[]
-  store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([cpf, storeId]) // CPF único por loja (multi-tenant)
 }
 
 model Sale {
