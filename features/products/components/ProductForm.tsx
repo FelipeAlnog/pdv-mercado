@@ -27,7 +27,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
   const { values, setField, validate, getError } = useProductForm(initial ?? prefilled);
   const barcodeRef = useRef<HTMLInputElement>(null);
   const scanBufferRef = useRef('');
-  const scanTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // In edit mode, auto-focus barcode field so scanner input lands there
   useEffect(() => {
