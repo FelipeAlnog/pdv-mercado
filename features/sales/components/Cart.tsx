@@ -295,54 +295,10 @@ function CustomerSearch() {
   );
 }
 
-// ─── Cart ─────────────────────────────────────────────────────────────────────
+// ─── Cart (items list only) ──────────────────────────────────────────────────
 
 export function Cart() {
-  const {
-    items, paymentMethod, setPaymentMethod,
-    customerName, customerId, dueDate, customerPhone,
-    getTotal, clearCart,
-  } = useCartStore();
-  const { createSale } = useSaleStore();
-  const { fetchProducts } = useProductStore();
-  const [loading, setLoading] = useState(false);
-
-  const total = getTotal();
-  const isPending = paymentMethod === 'pending';
-  const isCash = paymentMethod === 'cash';
-  const itemCount = items.reduce((a, i) => a + i.quantity, 0);
-
-  async function handleFinalizeSale() {
-    if (items.length === 0) {
-      toast.error('Adicione produtos antes de finalizar a venda.');
-      return;
-    }
-    if (isPending && !customerName.trim()) {
-      toast.error('Informe o nome do cliente para venda a receber.');
-      return;
-    }
-    setLoading(true);
-    try {
-      await createSale({
-        items: items.map(({ product: _, ...item }) => item),
-        total,
-        paymentMethod,
-        ...(isPending && {
-          customerName: customerName.trim(),
-          ...(customerPhone.trim() && { customerPhone: customerPhone.trim() }),
-          ...(dueDate && { dueDate }),
-          ...(customerId && { customerId }),
-        }),
-      });
-      await fetchProducts();
-      toast.success('Venda finalizada com sucesso!');
-      clearCart();
-    } catch {
-      toast.error('Erro ao finalizar venda.');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { items, clearCart } = useCartStore();
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -428,97 +384,145 @@ export function Cart() {
           )}
         </AnimatePresence>
       </div>
+    </div>
+  );
+}
 
-      <Separator />
+// ─── Cart Summary (payment, total, finalize) ─────────────────────────────────
 
-      {/* Footer */}
-      <div className="shrink-0 p-4 space-y-3">
+export function CartSummary() {
+  const {
+    items, paymentMethod, setPaymentMethod,
+    customerName, customerId, dueDate, customerPhone,
+    getTotal, clearCart,
+  } = useCartStore();
+  const { createSale } = useSaleStore();
+  const { fetchProducts } = useProductStore();
+  const [loading, setLoading] = useState(false);
 
-        {/* Payment method */}
-        <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Forma de Pagamento
-          </p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {PAYMENT_METHODS.map((m) => (
-              <motion.button
-                key={m.value}
-                onClick={() => setPaymentMethod(m.value)}
-                whileTap={{ scale: 0.94 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                className={cn(
-                  'flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-all duration-200',
-                  paymentMethod === m.value ? m.active : m.inactive,
-                )}
-              >
-                {m.icon}
-                {m.label}
-              </motion.button>
-            ))}
-          </div>
+  const total = getTotal();
+  const isPending = paymentMethod === 'pending';
+  const isCash = paymentMethod === 'cash';
+  const itemCount = items.reduce((a, i) => a + i.quantity, 0);
+
+  async function handleFinalizeSale() {
+    if (items.length === 0) {
+      toast.error('Adicione produtos antes de finalizar a venda.');
+      return;
+    }
+    if (isPending && !customerName.trim()) {
+      toast.error('Informe o nome do cliente para venda a receber.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await createSale({
+        items: items.map(({ product: _, ...item }) => item),
+        total,
+        paymentMethod,
+        ...(isPending && {
+          customerName: customerName.trim(),
+          ...(customerPhone.trim() && { customerPhone: customerPhone.trim() }),
+          ...(dueDate && { dueDate }),
+          ...(customerId && { customerId }),
+        }),
+      });
+      await fetchProducts();
+      toast.success('Venda finalizada com sucesso!');
+      clearCart();
+    } catch {
+      toast.error('Erro ao finalizar venda.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
+      {/* Payment method */}
+      <div>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Forma de Pagamento
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {PAYMENT_METHODS.map((m) => (
+            <motion.button
+              key={m.value}
+              onClick={() => setPaymentMethod(m.value)}
+              whileTap={{ scale: 0.94 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              className={cn(
+                'flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-all duration-200',
+                paymentMethod === m.value ? m.active : m.inactive,
+              )}
+            >
+              {m.icon}
+              {m.label}
+            </motion.button>
+          ))}
         </div>
-
-        {/* Expanding panels */}
-        <AnimatePresence initial={false}>
-          {isCash && (
-            <motion.div
-              key="cash"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="overflow-hidden"
-            >
-              <CashCalculator total={total} />
-            </motion.div>
-          )}
-          {isPending && (
-            <motion.div
-              key="pending"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="overflow-hidden"
-            >
-              <CustomerSearch />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Total */}
-        <div className="rounded-xl bg-gradient-to-br from-primary to-violet-600 p-4 text-primary-foreground">
-          <div className="mb-2 flex items-center justify-between text-sm opacity-80">
-            <span>Subtotal ({itemCount} un)</span>
-            <span>{formatCurrency(total)}</span>
-          </div>
-          <div className="flex items-end justify-between">
-            <span className="text-sm font-medium opacity-90">Total</span>
-            <motion.span
-              key={total}
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="text-3xl font-bold tracking-tight"
-            >
-              {formatCurrency(total)}
-            </motion.span>
-          </div>
-        </div>
-
-        <motion.div whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
-          <Button
-            onClick={handleFinalizeSale}
-            loading={loading}
-            disabled={items.length === 0}
-            size="lg"
-            className="w-full"
-          >
-            <CheckCircle className="h-5 w-5" />
-            Finalizar Venda
-          </Button>
-        </motion.div>
       </div>
+
+      {/* Expanding panels */}
+      <AnimatePresence initial={false}>
+        {isCash && (
+          <motion.div
+            key="cash"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="overflow-hidden"
+          >
+            <CashCalculator total={total} />
+          </motion.div>
+        )}
+        {isPending && (
+          <motion.div
+            key="pending"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="overflow-hidden"
+          >
+            <CustomerSearch />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Total */}
+      <div className="rounded-xl bg-gradient-to-br from-primary to-violet-600 p-4 text-primary-foreground">
+        <div className="mb-2 flex items-center justify-between text-sm opacity-80">
+          <span>Subtotal ({itemCount} un)</span>
+          <span>{formatCurrency(total)}</span>
+        </div>
+        <div className="flex items-end justify-between">
+          <span className="text-sm font-medium opacity-90">Total</span>
+          <motion.span
+            key={total}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="text-3xl font-bold tracking-tight"
+          >
+            {formatCurrency(total)}
+          </motion.span>
+        </div>
+      </div>
+
+      <motion.div whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
+        <Button
+          onClick={handleFinalizeSale}
+          loading={loading}
+          disabled={items.length === 0}
+          size="lg"
+          className="w-full"
+        >
+          <CheckCircle className="h-5 w-5" />
+          Finalizar Venda
+        </Button>
+      </motion.div>
     </div>
   );
 }

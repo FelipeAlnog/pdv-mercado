@@ -51,8 +51,9 @@ export function ProductList({ products }: ProductListProps) {
       await updateProduct(editing.id, data);
       toast.success('Produto atualizado com sucesso!');
       setEditing(null);
-    } catch {
-      toast.error('Erro ao atualizar produto.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao atualizar produto.';
+      toast.error(message);
     } finally {
       setLoadingAction(false);
     }
@@ -249,7 +250,7 @@ export function ProductList({ products }: ProductListProps) {
       />
 
       {/* ── Modals ───────────────────────────────────────────────────────── */}
-      <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar produto" size="lg">
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar produto" size="lg" locked>
         {editing && (
           <ProductForm
             initial={editing}

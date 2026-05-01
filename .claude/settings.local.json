@@ -25,7 +25,20 @@
       "Bash(cmd:*)",
       "Bash(powershell:*)",
       "Bash(xargs grep:*)",
-      "Bash(git pull:)"
+      "Bash(git pull:)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(jobs)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist /FI \"PID eq 6664\")",
+      "Bash(tasklist /FI \"PID eq 21592\")",
+      "Bash(npx kill-port:*)",
+      "Bash(curl -s -o /dev/null -w \"HTTP status: %{http_code}\\\\n\" http://localhost:3001)",
+      "Bash(curl -s -o /dev/null -w \"HTTP status /login: %{http_code}\\\\n\" http://localhost:3001/login)",
+      "Bash(curl -s -o /dev/null -w \"HTTP status /api/products: %{http_code}\\\\n\" http://localhost:3001/api/products)",
+      "Bash(kill %1)",
+      "Bash(node -e ':*)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('\\\\n=== SCRIPTS ==='\\); console.log\\(JSON.stringify\\(p.scripts, null, 2\\)\\);\")",
+      "Bash(rm:*)"
     ]
   }
 }

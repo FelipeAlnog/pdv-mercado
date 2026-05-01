@@ -21,6 +21,8 @@ interface ModalProps {
   children: React.ReactNode
   footer?: React.ReactNode
   size?: "sm" | "md" | "lg" | "xl"
+  /** When true, modal only closes via X button or Cancel — not Escape or overlay click */
+  locked?: boolean
 }
 
 const sizeClasses: Record<string, string> = {
@@ -30,10 +32,15 @@ const sizeClasses: Record<string, string> = {
   xl: "sm:max-w-2xl",
 }
 
-export function Modal({ open, onClose, title, children, footer, size = "md" }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, size = "md", locked = false }: ModalProps) {
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className={cn(sizeClasses[size])}>
+    <Dialog open={open} onOpenChange={(o) => !o && !locked && onClose()}>
+      <DialogContent
+        className={cn(sizeClasses[size])}
+        onPointerDownOutside={locked ? (e) => e.preventDefault() : undefined}
+        onEscapeKeyDown={locked ? (e) => e.preventDefault() : undefined}
+        onInteractOutside={locked ? (e) => e.preventDefault() : undefined}
+      >
         {title && (
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>

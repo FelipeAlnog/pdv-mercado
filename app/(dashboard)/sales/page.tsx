@@ -7,7 +7,7 @@ import { ExportMenu } from "@/components/ui/ExportMenu";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { BarcodeInput } from "@/features/sales/components/BarcodeInput";
-import { Cart } from "@/features/sales/components/Cart";
+import { Cart, CartSummary } from "@/features/sales/components/Cart";
 import { SaleHistory } from "@/features/sales/components/SaleHistory";
 import { ProductForm } from "@/features/products/components/ProductForm";
 import { useProductStore } from "@/store/useProductStore";
@@ -123,10 +123,16 @@ export default function SalesPage() {
                 onNotFound={(barcode) => setQuickBarcode(barcode)}
               />
             </div>
+
+            {/* Cart — same width as scanner */}
+            <div className="mt-4 h-[420px] lg:h-[calc(100vh-16rem)]">
+              <Cart />
+            </div>
           </div>
 
-          <div className="h-[420px] lg:h-[calc(100vh-12rem)]">
-            <Cart />
+          {/* Payment / Total — right sidebar, pinned to bottom */}
+          <div className="flex flex-col justify-end lg:sticky lg:top-4 lg:self-end lg:h-[calc(100vh-8rem)]">
+            <CartSummary />
           </div>
         </div>
       ) : (

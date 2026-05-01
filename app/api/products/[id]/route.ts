@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/api-auth';
-import { parseBody, updateProductSchema } from '@/lib/validation/schemas';
-import { handlePrismaError } from '@/lib/prisma-errors';
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { requireAuth } from "@/lib/api-auth";
+import { parseBody, updateProductSchema } from "@/lib/validation/schemas";
+import { handlePrismaError } from "@/lib/prisma-errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -15,10 +15,17 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const product = await prisma.product.findUnique({
       where: { id, storeId: auth.storeId },
     });
-    if (!product) return NextResponse.json({ error: 'Produto não encontrado.' }, { status: 404 });
+    if (!product)
+      return NextResponse.json(
+        { error: "Produto não encontrado." },
+        { status: 404 },
+      );
     return NextResponse.json(product);
   } catch {
-    return NextResponse.json({ error: 'Erro ao buscar produto.' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro ao buscar produto." },
+      { status: 500 },
+    );
   }
 }
 
@@ -31,20 +38,38 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
 
   try {
     const { id } = await params;
+
+    // If barcode is being changed, check it doesn't conflict with another product
+    if (data.barcode !== undefined && data.barcode !== '') {
+      const existing = await prisma.product.findFirst({
+        where: {
+          barcode: data.barcode,
+          storeId: auth.storeId,
+          id: { not: id },
+        },
+      });
+      if (existing) {
+        return NextResponse.json(
+          { error: 'Código de barras já cadastrado em outro produto.' },
+          { status: 409 },
+        );
+      }
+    }
+
     const product = await prisma.product.update({
       where: { id, storeId: auth.storeId },
       data: {
-        ...(data.name     !== undefined && { name:     data.name }),
-        ...(data.price    !== undefined && { price:    data.price }),
-        ...(data.barcode  !== undefined && { barcode:  data.barcode }),
-        ...(data.stock    !== undefined && { stock:    data.stock }),
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.price !== undefined && { price: data.price }),
+        ...(data.barcode !== undefined && { barcode: data.barcode }),
+        ...(data.stock !== undefined && { stock: data.stock }),
         ...(data.minStock !== undefined && { minStock: data.minStock }),
         ...(data.category !== undefined && { category: data.category }),
       },
     });
     return NextResponse.json(product);
   } catch (e) {
-    return handlePrismaError(e, 'produto');
+    return handlePrismaError(e, "produto");
   }
 }
 
@@ -57,6 +82,6 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     await prisma.product.delete({ where: { id, storeId: auth.storeId } });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
-    return handlePrismaError(e, 'produto');
+    return handlePrismaError(e, "produto");
   }
 }

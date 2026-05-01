@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef, useCallback, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Field } from '@/components/ui/field';
 import { SimpleSelect } from '@/components/ui/simple-select';
 import { Button } from '@/components/ui/button';
@@ -23,6 +25,16 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
     : undefined;
 
   const { values, setField, validate, getError } = useProductForm(initial ?? prefilled);
+  const barcodeRef = useRef<HTMLInputElement>(null);
+  const scanBufferRef = useRef('');
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // In edit mode, auto-focus barcode field so scanner input lands there
+  useEffect(() => {
+    if (initial) {
+      setTimeout(() => barcodeRef.current?.focus(), 150);
+    }
+  }, [initial]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +42,40 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
     await onSubmit(values);
   }
 
+  // Detect fast scanner input: characters arrive < 50ms apart, then Enter
+  const handleBarcodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setField('barcode', val);
+
+    // Track rapid input (scanner pattern)
+    clearTimeout(scanTimerRef.current);
+    scanBufferRef.current = val;
+    scanTimerRef.current = setTimeout(() => {
+      scanBufferRef.current = '';
+    }, 100);
+  }, [setField]);
+
+  function handleBarcodeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const currentBarcode = (e.target as HTMLInputElement).value.trim();
+      if (!currentBarcode) return;
+
+      // Always update the field value from DOM
+      setField('barcode', currentBarcode);
+
+      if (!initial) {
+        // Create mode: submit the form
+        const updatedValues = { ...values, barcode: currentBarcode };
+        if (validate()) onSubmit(updatedValues);
+      } else {
+        // Edit mode: just confirm the barcode was scanned, don't close modal
+        toast.success(`Código ${currentBarcode} preenchido. Clique "Salvar" para confirmar.`);
+      }
+    }
+  }
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Field
@@ -38,7 +84,7 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
         onChange={(e) => setField('name', e.target.value)}
         error={getError('name')}
         placeholder="Ex: Água Mineral 500ml"
-        autoFocus
+        autoFocus={!initial}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -61,12 +107,16 @@ export function ProductForm({ initial, onSubmit, onCancel, loading, prefillBarco
       </div>
 
       <Field
+        ref={barcodeRef}
         label="Código de barras"
         value={values.barcode}
-        onChange={(e) => setField('barcode', e.target.value)}
+        onChange={handleBarcodeChange}
+        onKeyDown={handleBarcodeKeyDown}
+        spellCheck={false}
+        autoComplete="on"
         error={getError('barcode')}
         placeholder="Ex: 7891234567890"
-        hint="Digite ou escaneie o código de barras"
+        hint={initial ? "Escaneie para atualizar e salvar automaticamente" : "Digite ou escaneie o código de barras"}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -39,7 +39,10 @@ export const productService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Erro ao atualizar produto.');
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? 'Erro ao atualizar produto.');
+    }
     return res.json();
   },
 
