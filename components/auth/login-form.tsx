@@ -58,7 +58,9 @@ export function LoginForm() {
     } else {
       // Travar imediatamente — componente desmonta na navegação
       setIsRedirecting(true);
-      router.push("/dashboard");
+      const res = await fetch("/api/admin/me");
+      const { isAdmin } = await res.json();
+      router.push(isAdmin ? "/superadmin" : "/dashboard");
       router.refresh();
     }
   }
