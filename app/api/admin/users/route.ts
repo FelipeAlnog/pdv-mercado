@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
             planExpiresAt: true,
             createdAt: true,
             _count: {
-              select: { sales: true, products: true, customers: true },
+              select: { sales: true, product: true, customers: true },
             },
           },
         },

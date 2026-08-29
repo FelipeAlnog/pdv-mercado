@@ -34,7 +34,7 @@ type UserStore = {
   plan: Plan;
   planExpiresAt: string | null;
   createdAt: string;
-  _count: { sales: number; products: number; customers: number };
+  _count: { sales: number; product: number; customers: number };
 } | null;
 
 type AdminUser = {
@@ -411,7 +411,7 @@ export default function AdminPage() {
                               {user.store ? (
                                 <span className="flex items-center justify-center gap-1">
                                   <Package className="h-3 w-3 text-muted-foreground" />
-                                  {user.store._count.products}
+                                  {user.store._count.product}
                                 </span>
                               ) : '—'}
                             </TableCell>
