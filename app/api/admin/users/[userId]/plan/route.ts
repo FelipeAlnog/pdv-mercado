@@ -15,8 +15,6 @@ export async function PATCH(
   const { admin, error } = await requireAdmin(req);
   if (error) return error;
 
-  void admin;
-
   const { userId } = await params;
 
   let body: unknown;
@@ -36,12 +34,20 @@ export async function PATCH(
   try {
     const store = await prisma.store.findUnique({
       where: { ownerId: userId },
-      select: { id: true },
+      select: { id: true, plan: true, planExpiresAt: true },
     });
 
     if (!store) {
       return NextResponse.json({ error: 'Usuário sem loja cadastrada.' }, { status: 404 });
     }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    const oldPlan = store.plan;
+    const oldExpiresAt = store.planExpiresAt;
 
     const updated = await prisma.store.update({
       where: { id: store.id },
@@ -50,6 +56,22 @@ export async function PATCH(
         planExpiresAt: planExpiresAt ? new Date(planExpiresAt) : null,
       },
       select: { plan: true, planExpiresAt: true },
+    });
+
+    await prisma.adminLog.create({
+      data: {
+        adminId: admin.userId,
+        adminEmail: admin.email,
+        targetUserId: userId,
+        targetEmail: targetUser?.email ?? '',
+        action: 'plan_changed',
+        details: {
+          from: oldPlan,
+          to: plan,
+          oldExpiresAt: oldExpiresAt?.toISOString() ?? null,
+          expiresAt: planExpiresAt ?? null,
+        },
+      },
     });
 
     return NextResponse.json(updated);

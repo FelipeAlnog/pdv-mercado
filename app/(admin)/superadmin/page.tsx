@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
+import { Pagination } from '@/components/ui/Pagination';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { STAGGER_CONTAINER, EASE_OUT } from '@/lib/motion';
+import { exportToExcelMultiSheet, exportToPDFMultiSection } from '@/lib/export';
 import {
   Users,
   ShoppingCart,
@@ -34,12 +36,27 @@ import {
   XCircle,
   UserX,
   Store,
+  Ban,
+  Shield,
+  ShieldOff,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  DollarSign,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Plan = 'FREE' | 'PRO';
-type StatusFilter = 'all' | 'active' | 'inactive';
+type Role = 'USER' | 'ADMIN';
+type StatusFilter = 'all' | 'active' | 'inactive' | 'blocked';
+type SortField = 'name' | 'createdAt' | 'plan' | 'planExpiresAt' | 'status';
+type SortDir = 'asc' | 'desc';
 
 type UserStore = {
   id: string;
@@ -55,7 +72,21 @@ type AdminUser = {
   name: string;
   email: string;
   createdAt: string;
+  blocked: boolean;
+  role: Role;
   store: UserStore;
+};
+
+type AdminLog = {
+  id: string;
+  action: string;
+  details: Record<string, unknown> | null;
+  adminEmail: string;
+  createdAt: string;
+};
+
+type UserDetail = AdminUser & {
+  store: (NonNullable<UserStore> & { totalRevenue: number; lastSaleAt: string | null }) | null;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -69,21 +100,32 @@ function formatDate(iso: string | null) {
   });
 }
 
+function formatCurrency(value: number) {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 function isPlanExpired(planExpiresAt: string | null) {
   if (!planExpiresAt) return false;
   return new Date(planExpiresAt) < new Date();
 }
 
-/**
- * Um cliente é considerado ATIVO se:
- * - Tem loja cadastrada
- * - E plano FREE (sem expiração), ou PRO com data de expiração futura ou sem data
- */
-function isClientActive(user: AdminUser): boolean {
-  if (!user.store) return false;
-  if (user.store.plan === 'FREE') return true;
-  // PRO: ativo se não tiver data definida ou se a data ainda não expirou
-  return !isPlanExpired(user.store.planExpiresAt);
+function daysUntilExpiry(planExpiresAt: string | null): number | null {
+  if (!planExpiresAt) return null;
+  const diff = new Date(planExpiresAt).getTime() - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function isExpiringSoon(planExpiresAt: string | null): boolean {
+  const days = daysUntilExpiry(planExpiresAt);
+  return days !== null && days >= 0 && days <= 7;
+}
+
+function getUserStatus(user: AdminUser): 'blocked' | 'active' | 'inactive' | 'nostore' {
+  if (user.blocked) return 'blocked';
+  if (!user.store) return 'nostore';
+  if (user.store.plan === 'FREE') return 'active';
+  if (isPlanExpired(user.store.planExpiresAt)) return 'inactive';
+  return 'active';
 }
 
 function toDateInputValue(iso: string | null): string {
@@ -100,7 +142,32 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-// ─── Edit Dialog ─────────────────────────────────────────────────────────────
+function addDaysToDate(base: string | null, days: number): string {
+  const from = base && new Date(base) > new Date() ? new Date(base) : new Date();
+  from.setDate(from.getDate() + days);
+  return from.toISOString().slice(0, 10);
+}
+
+function actionLabel(action: string): string {
+  const map: Record<string, string> = {
+    plan_changed: 'Plano alterado',
+    blocked: 'Usuário bloqueado',
+    unblocked: 'Usuário desbloqueado',
+    role_changed: 'Role alterada',
+  };
+  return map[action] ?? action;
+}
+
+// ─── SortIcon ─────────────────────────────────────────────────────────────────
+
+function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: SortField; sortDir: SortDir }) {
+  if (field !== sortField) return <ChevronsUpDown className="ml-1 inline h-3 w-3 text-muted-foreground/50" />;
+  return sortDir === 'asc'
+    ? <ChevronUp className="ml-1 inline h-3 w-3" />
+    : <ChevronDown className="ml-1 inline h-3 w-3" />;
+}
+
+// ─── Edit Plan Dialog ─────────────────────────────────────────────────────────
 
 type EditDialogProps = {
   user: AdminUser;
@@ -111,9 +178,7 @@ type EditDialogProps = {
 
 function EditPlanDialog({ user, open, onClose, onSaved }: EditDialogProps) {
   const [plan, setPlan] = useState<Plan>(user.store?.plan ?? 'FREE');
-  const [expiresAt, setExpiresAt] = useState<string>(
-    toDateInputValue(user.store?.planExpiresAt ?? null),
-  );
+  const [expiresAt, setExpiresAt] = useState<string>(toDateInputValue(user.store?.planExpiresAt ?? null));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -126,21 +191,16 @@ function EditPlanDialog({ user, open, onClose, onSaved }: EditDialogProps) {
   async function handleSave() {
     setSaving(true);
     try {
-      const planExpiresAt = expiresAt
-        ? new Date(expiresAt + 'T23:59:59.000Z').toISOString()
-        : null;
-
+      const planExpiresAt = expiresAt ? new Date(expiresAt + 'T23:59:59.000Z').toISOString() : null;
       const res = await fetch(`/api/admin/users/${user.id}/plan`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan, planExpiresAt }),
       });
-
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? 'Erro ao salvar.');
       }
-
       onSaved(user.id, plan, planExpiresAt);
       toast.success('Assinatura atualizada com sucesso.');
       onClose();
@@ -151,6 +211,13 @@ function EditPlanDialog({ user, open, onClose, onSaved }: EditDialogProps) {
     }
   }
 
+  const quickExtensions = [
+    { label: '+7 dias', days: 7 },
+    { label: '+30 dias', days: 30 },
+    { label: '+3 meses', days: 90 },
+    { label: '+1 ano', days: 365 },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-md">
@@ -159,7 +226,6 @@ function EditPlanDialog({ user, open, onClose, onSaved }: EditDialogProps) {
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Client info */}
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
               {getInitials(user.name)}
@@ -175,7 +241,6 @@ function EditPlanDialog({ user, open, onClose, onSaved }: EditDialogProps) {
             </div>
           </div>
 
-          {/* Plan selector */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Plano</label>
             <div className="flex gap-2">
@@ -200,11 +265,24 @@ function EditPlanDialog({ user, open, onClose, onSaved }: EditDialogProps) {
             </div>
           </div>
 
-          {/* Expiry date */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Data de expiração da assinatura
-            </label>
+            <label className="text-sm font-medium">Extensão rápida</label>
+            <div className="flex flex-wrap gap-2">
+              {quickExtensions.map(({ label, days }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setExpiresAt(addDaysToDate(user.store?.planExpiresAt ?? null, days))}
+                  className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Data de expiração da assinatura</label>
             <input
               type="date"
               value={expiresAt}
@@ -225,9 +303,7 @@ function EditPlanDialog({ user, open, onClose, onSaved }: EditDialogProps) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving && <Spinner size="sm" className="mr-2" />}
             Salvar alterações
@@ -238,20 +314,198 @@ function EditPlanDialog({ user, open, onClose, onSaved }: EditDialogProps) {
   );
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
+// ─── User Detail Dialog ───────────────────────────────────────────────────────
+
+function UserDetailDialog({
+  userId,
+  open,
+  onClose,
+}: {
+  userId: string | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [detail, setDetail] = useState<UserDetail | null>(null);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<'data' | 'history'>('data');
+
+  useEffect(() => {
+    if (!open || !userId) return;
+    setDetail(null);
+    setLogs([]);
+    setTab('data');
+    setLoading(true);
+
+    Promise.all([
+      fetch(`/api/admin/users/${userId}`).then((r) => r.json()),
+      fetch(`/api/admin/users/${userId}/logs`).then((r) => r.json()),
+    ])
+      .then(([d, l]) => {
+        setDetail(d);
+        setLogs(Array.isArray(l) ? l : []);
+      })
+      .catch(() => toast.error('Erro ao carregar detalhes.'))
+      .finally(() => setLoading(false));
+  }, [open, userId]);
+
+  const status = detail ? getUserStatus(detail) : 'nostore';
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Detalhes do Usuário</DialogTitle>
+        </DialogHeader>
+
+        {loading && (
+          <div className="flex h-48 items-center justify-center">
+            <Spinner size="lg" className="text-primary" />
+          </div>
+        )}
+
+        {!loading && detail && (
+          <div className="space-y-5">
+            {/* Header */}
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+                {getInitials(detail.name)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold">{detail.name}</h2>
+                  {detail.role === 'ADMIN' && (
+                    <Badge variant="info"><Shield className="h-3 w-3" /> Admin</Badge>
+                  )}
+                  {detail.blocked ? (
+                    <Badge variant="danger"><Ban className="h-3 w-3" /> Bloqueado</Badge>
+                  ) : (
+                    <Badge variant={status === 'active' ? 'success' : 'secondary'}>
+                      {status === 'active' ? <><CheckCircle2 className="h-3 w-3" /> Ativo</> : <><XCircle className="h-3 w-3" /> Inativo</>}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{detail.email}</p>
+                <p className="text-xs text-muted-foreground">Membro desde {formatDate(detail.createdAt)}</p>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex rounded-lg border border-border bg-muted/40 p-1 text-sm">
+              {([{ key: 'data', label: 'Dados' }, { key: 'history', label: 'Histórico' }] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setTab(key)}
+                  className={[
+                    'flex-1 rounded-md px-3 py-1.5 font-medium transition-all',
+                    tab === key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {tab === 'data' && (
+              <>
+                {/* Store cards */}
+                {detail.store ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <p className="text-xs text-muted-foreground">Total de vendas</p>
+                        <p className="mt-1 text-xl font-bold">{detail.store._count.sales}</p>
+                        <ShoppingCart className="mt-1 h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <p className="text-xs text-muted-foreground">Faturamento total</p>
+                        <p className="mt-1 text-xl font-bold">{formatCurrency(detail.store.totalRevenue)}</p>
+                        <DollarSign className="mt-1 h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <p className="text-xs text-muted-foreground">Produtos</p>
+                        <p className="mt-1 text-xl font-bold">{detail.store._count.product}</p>
+                        <Package className="mt-1 h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <p className="text-xs text-muted-foreground">Clientes</p>
+                        <p className="mt-1 text-xl font-bold">{detail.store._count.customers}</p>
+                        <Users className="mt-1 h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <p className="text-xs text-muted-foreground">Plano atual</p>
+                        <p className="mt-1 text-xl font-bold">{detail.store.plan}</p>
+                        <Crown className="mt-1 h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <p className="text-xs text-muted-foreground">Última venda</p>
+                        <p className="mt-1 text-sm font-semibold">{formatDate(detail.store.lastSaleAt)}</p>
+                        <Clock className="mt-1 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-muted/30 p-4">
+                      <p className="text-sm font-medium">Loja: <span className="text-foreground">{detail.store.name}</span></p>
+                      {detail.store.planExpiresAt && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Expira em: {formatDate(detail.store.planExpiresAt)}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                    Este usuário não possui loja cadastrada.
+                  </div>
+                )}
+              </>
+            )}
+
+            {tab === 'history' && (
+              <div className="space-y-2">
+                {logs.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                    Nenhuma ação registrada.
+                  </div>
+                ) : (
+                  logs.map((log) => (
+                    <div key={log.id} className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        <Shield className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{actionLabel(log.action)}</p>
+                        <p className="text-xs text-muted-foreground">por {log.adminEmail}</p>
+                        {log.details && (
+                          <p className="mt-1 text-xs text-muted-foreground font-mono truncate">
+                            {JSON.stringify(log.details)}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDate(log.createdAt)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
-  label,
-  value,
-  icon,
-  color = 'primary',
-  onClick,
-  active,
+  label, value, icon, color = 'primary', onClick, active,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
-  color?: 'primary' | 'emerald' | 'red' | 'violet';
+  color?: 'primary' | 'emerald' | 'red' | 'violet' | 'amber';
   onClick?: () => void;
   active?: boolean;
 }) {
@@ -260,6 +514,7 @@ function StatCard({
     emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     red:     'bg-red-500/10 text-red-600 dark:text-red-400',
     violet:  'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+    amber:   'bg-amber-500/10 text-amber-600 dark:text-amber-400',
   };
 
   return (
@@ -283,14 +538,105 @@ function StatCard({
   );
 }
 
+// ─── Export Menu ──────────────────────────────────────────────────────────────
+
+function ExportButton({ users }: { users: AdminUser[] }) {
+  const [open, setOpen] = useState(false);
+
+  function buildRows(list: AdminUser[]) {
+    return list.map((u) => [
+      u.name,
+      u.email,
+      u.store?.name ?? '—',
+      u.blocked ? 'Bloqueado' : getUserStatus(u) === 'active' ? 'Ativo' : getUserStatus(u) === 'inactive' ? 'Inativo' : 'Sem loja',
+      u.store?.plan ?? '—',
+      formatDate(u.store?.planExpiresAt ?? null),
+      u.store?._count.sales ?? 0,
+      u.store?._count.product ?? 0,
+      u.store?._count.customers ?? 0,
+      formatDate(u.createdAt),
+    ] as (string | number)[]);
+  }
+
+  const headers = ['Nome', 'Email', 'Loja', 'Status', 'Plano', 'Expira em', 'Vendas', 'Produtos', 'Clientes', 'Cadastro'];
+
+  const summaryRows: (string | number)[][] = [
+    ['Total de usuários', users.length],
+    ['Ativos', users.filter((u) => getUserStatus(u) === 'active').length],
+    ['Inativos', users.filter((u) => getUserStatus(u) === 'inactive').length],
+    ['Bloqueados', users.filter((u) => u.blocked).length],
+    ['Plano PRO', users.filter((u) => u.store?.plan === 'PRO' && !isPlanExpired(u.store.planExpiresAt)).length],
+  ];
+
+  function handleExcel() {
+    exportToExcelMultiSheet('clientes-superadmin', [
+      { name: 'Clientes', headers, rows: buildRows(users) },
+      { name: 'Resumo', headers: ['Métrica', 'Valor'], rows: summaryRows },
+    ]);
+    setOpen(false);
+  }
+
+  function handlePDF() {
+    exportToPDFMultiSection(
+      'Relatório de Clientes',
+      [
+        { subtitle: 'Clientes', headers, rows: buildRows(users) },
+        { subtitle: 'Resumo', headers: ['Métrica', 'Valor'], rows: summaryRows },
+      ],
+      'clientes-superadmin',
+      true,
+    );
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative">
+      <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
+        <Download className="h-4 w-4" />
+        Exportar
+      </Button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-border bg-card shadow-lg">
+            <button
+              type="button"
+              onClick={handleExcel}
+              className="flex w-full items-center gap-2 rounded-t-xl px-4 py-2.5 text-sm hover:bg-muted/60"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              Excel (.xlsx)
+            </button>
+            <button
+              type="button"
+              onClick={handlePDF}
+              className="flex w-full items-center gap-2 rounded-b-xl px-4 py-2.5 text-sm hover:bg-muted/60"
+            >
+              <FileText className="h-4 w-4 text-red-500" />
+              PDF
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 10;
+
 export default function SuperAdminPage() {
-  const [users, setUsers]             = useState<AdminUser[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [editUser, setEditUser]       = useState<AdminUser | null>(null);
-  const [search, setSearch]           = useState('');
+  const [users, setUsers]               = useState<AdminUser[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [editUser, setEditUser]         = useState<AdminUser | null>(null);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
+  const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortField, setSortField]       = useState<SortField>('createdAt');
+  const [sortDir, setSortDir]           = useState<SortDir>('desc');
+  const [page, setPage]                 = useState(1);
+  const [pageSize, setPageSize]         = useState(PAGE_SIZE);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -310,37 +656,113 @@ export default function SuperAdminPage() {
   function handleSaved(userId: string, plan: Plan, planExpiresAt: string | null) {
     setUsers((prev) =>
       prev.map((u) =>
-        u.id === userId && u.store
-          ? { ...u, store: { ...u.store, plan, planExpiresAt } }
-          : u,
+        u.id === userId && u.store ? { ...u, store: { ...u.store, plan, planExpiresAt } } : u,
       ),
     );
   }
 
+  async function handleBlock(user: AdminUser) {
+    const prev = users;
+    setUsers((us) => us.map((u) => u.id === user.id ? { ...u, blocked: !u.blocked } : u));
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/block`, { method: 'PATCH' });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setUsers((us) => us.map((u) => u.id === user.id ? { ...u, blocked: data.blocked } : u));
+      toast.success(data.blocked ? 'Usuário bloqueado.' : 'Usuário desbloqueado.');
+    } catch {
+      setUsers(prev);
+      toast.error('Erro ao alterar bloqueio.');
+    }
+  }
+
+  async function handleRole(user: AdminUser) {
+    const newRole: Role = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
+    const prev = users;
+    setUsers((us) => us.map((u) => u.id === user.id ? { ...u, role: newRole } : u));
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(newRole === 'ADMIN' ? 'Usuário promovido a admin.' : 'Admin rebaixado para usuário.');
+    } catch {
+      setUsers(prev);
+      toast.error('Erro ao alterar role.');
+    }
+  }
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+    setPage(1);
+  }
+
   // ── Stats ──────────────────────────────────────────────────────────────────
   const totalClients    = users.length;
-  const activeClients   = users.filter(isClientActive).length;
-  const inactiveClients = users.filter((u) => !isClientActive(u)).length;
+  const activeClients   = users.filter((u) => getUserStatus(u) === 'active').length;
+  const inactiveClients = users.filter((u) => getUserStatus(u) === 'inactive').length;
+  const blockedClients  = users.filter((u) => u.blocked).length;
   const proClients      = users.filter((u) => u.store?.plan === 'PRO' && !isPlanExpired(u.store.planExpiresAt)).length;
 
-  // ── Filtered list ──────────────────────────────────────────────────────────
+  // ── Filtered + sorted list ─────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return users.filter((u) => {
+
+    const list = users.filter((u) => {
       const matchSearch =
         !q ||
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
         (u.store?.name ?? '').toLowerCase().includes(q);
 
+      const status = getUserStatus(u);
       const matchStatus =
         statusFilter === 'all' ||
-        (statusFilter === 'active' && isClientActive(u)) ||
-        (statusFilter === 'inactive' && !isClientActive(u));
+        (statusFilter === 'active' && status === 'active') ||
+        (statusFilter === 'inactive' && status === 'inactive') ||
+        (statusFilter === 'blocked' && u.blocked);
 
       return matchSearch && matchStatus;
     });
-  }, [users, search, statusFilter]);
+
+    list.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case 'createdAt':
+          cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'plan':
+          cmp = (a.store?.plan ?? '').localeCompare(b.store?.plan ?? '');
+          break;
+        case 'planExpiresAt':
+          cmp = (a.store?.planExpiresAt ?? '').localeCompare(b.store?.planExpiresAt ?? '');
+          break;
+        case 'status':
+          cmp = getUserStatus(a).localeCompare(getUserStatus(b));
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
+    return list;
+  }, [users, search, statusFilter, sortField, sortDir]);
+
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage    = Math.min(page, totalPages);
+  const paginated   = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  // reset page when filters change
+  useEffect(() => { setPage(1); }, [search, statusFilter, sortField, sortDir]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -349,14 +771,15 @@ export default function SuperAdminPage() {
         <div className="mx-auto flex max-w-screen-xl items-center justify-between">
           <div>
             <h1 className="text-xl font-bold">Gerenciamento de Clientes</h1>
-            <p className="text-sm text-muted-foreground">
-              Visualize e gerencie todos os clientes do sistema
-            </p>
+            <p className="text-sm text-muted-foreground">Visualize e gerencie todos os clientes do sistema</p>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
-            <RefreshCw className={['h-4 w-4', loading ? 'animate-spin' : ''].join(' ')} />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <ExportButton users={filtered} />
+            <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
+              <RefreshCw className={['h-4 w-4', loading ? 'animate-spin' : ''].join(' ')} />
+              Atualizar
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -369,41 +792,16 @@ export default function SuperAdminPage() {
           <>
             {/* Stats */}
             <motion.div
-              className="grid grid-cols-2 gap-4 sm:grid-cols-4"
+              className="grid grid-cols-2 gap-4 sm:grid-cols-5"
               variants={STAGGER_CONTAINER}
               initial="hidden"
               animate="visible"
             >
-              <StatCard
-                label="Total de clientes"
-                value={totalClients}
-                icon={<Users className="h-5 w-5" />}
-                color="primary"
-                onClick={() => setStatusFilter('all')}
-                active={statusFilter === 'all'}
-              />
-              <StatCard
-                label="Clientes ativos"
-                value={activeClients}
-                icon={<CheckCircle2 className="h-5 w-5" />}
-                color="emerald"
-                onClick={() => setStatusFilter('active')}
-                active={statusFilter === 'active'}
-              />
-              <StatCard
-                label="Clientes inativos"
-                value={inactiveClients}
-                icon={<XCircle className="h-5 w-5" />}
-                color="red"
-                onClick={() => setStatusFilter('inactive')}
-                active={statusFilter === 'inactive'}
-              />
-              <StatCard
-                label="Assinaturas PRO"
-                value={proClients}
-                icon={<Crown className="h-5 w-5" />}
-                color="violet"
-              />
+              <StatCard label="Total" value={totalClients} icon={<Users className="h-5 w-5" />} color="primary" onClick={() => setStatusFilter('all')} active={statusFilter === 'all'} />
+              <StatCard label="Ativos" value={activeClients} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" onClick={() => setStatusFilter('active')} active={statusFilter === 'active'} />
+              <StatCard label="Inativos" value={inactiveClients} icon={<XCircle className="h-5 w-5" />} color="red" onClick={() => setStatusFilter('inactive')} active={statusFilter === 'inactive'} />
+              <StatCard label="Bloqueados" value={blockedClients} icon={<Ban className="h-5 w-5" />} color="amber" onClick={() => setStatusFilter('blocked')} active={statusFilter === 'blocked'} />
+              <StatCard label="Plano PRO" value={proClients} icon={<Crown className="h-5 w-5" />} color="violet" />
             </motion.div>
 
             {/* Search + filters */}
@@ -413,7 +811,6 @@ export default function SuperAdminPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...EASE_OUT, delay: 0.15 }}
             >
-              {/* Search */}
               <div className="relative max-w-sm flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -425,12 +822,12 @@ export default function SuperAdminPage() {
                 />
               </div>
 
-              {/* Status tabs */}
               <div className="flex rounded-lg border border-border bg-muted/40 p-1 text-sm">
                 {([
                   { key: 'all',      label: 'Todos' },
                   { key: 'active',   label: 'Ativos' },
                   { key: 'inactive', label: 'Inativos' },
+                  { key: 'blocked',  label: 'Bloqueados' },
                 ] as { key: StatusFilter; label: string }[]).map(({ key, label }) => (
                   <button
                     key={key}
@@ -438,9 +835,7 @@ export default function SuperAdminPage() {
                     onClick={() => setStatusFilter(key)}
                     className={[
                       'rounded-md px-3 py-1 font-medium transition-all',
-                      statusFilter === key
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground',
+                      statusFilter === key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                     ].join(' ')}
                   >
                     {label}
@@ -467,20 +862,30 @@ export default function SuperAdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Cliente</TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort('name')}>
+                        Cliente <SortIcon field="name" sortField={sortField} sortDir={sortDir} />
+                      </TableHead>
                       <TableHead>Loja</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Plano</TableHead>
-                      <TableHead>Expira em</TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort('status')}>
+                        Status <SortIcon field="status" sortField={sortField} sortDir={sortDir} />
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort('plan')}>
+                        Plano <SortIcon field="plan" sortField={sortField} sortDir={sortDir} />
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort('planExpiresAt')}>
+                        Expira em <SortIcon field="planExpiresAt" sortField={sortField} sortDir={sortDir} />
+                      </TableHead>
                       <TableHead className="text-center">Vendas</TableHead>
                       <TableHead className="text-center">Produtos</TableHead>
                       <TableHead className="text-center">Clientes</TableHead>
-                      <TableHead>Cadastro</TableHead>
-                      <TableHead className="w-10" />
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort('createdAt')}>
+                        Cadastro <SortIcon field="createdAt" sortField={sortField} sortDir={sortDir} />
+                      </TableHead>
+                      <TableHead className="w-28">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.length === 0 ? (
+                    {paginated.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={10} className="py-16 text-center">
                           <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -490,12 +895,14 @@ export default function SuperAdminPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filtered.map((user) => {
-                        const active  = isClientActive(user);
-                        const expired = user.store ? isPlanExpired(user.store.planExpiresAt) : false;
+                      paginated.map((user) => {
+                        const status   = getUserStatus(user);
+                        const expired  = user.store ? isPlanExpired(user.store.planExpiresAt) : false;
+                        const expiring = user.store ? isExpiringSoon(user.store.planExpiresAt) : false;
+                        const daysLeft = user.store ? daysUntilExpiry(user.store.planExpiresAt) : null;
 
                         return (
-                          <TableRow key={user.id}>
+                          <TableRow key={user.id} className={user.blocked ? 'opacity-60' : ''}>
                             {/* Client */}
                             <TableCell>
                               <div className="flex items-center gap-3">
@@ -503,7 +910,16 @@ export default function SuperAdminPage() {
                                   {getInitials(user.name)}
                                 </div>
                                 <div>
-                                  <p className="text-sm font-medium leading-tight">{user.name}</p>
+                                  <button
+                                    type="button"
+                                    className="text-sm font-medium leading-tight hover:underline text-left"
+                                    onClick={() => setDetailUserId(user.id)}
+                                  >
+                                    {user.name}
+                                    {user.role === 'ADMIN' && (
+                                      <Badge variant="info" className="ml-1.5 text-[10px]">Admin</Badge>
+                                    )}
+                                  </button>
                                   <p className="text-xs text-muted-foreground">{user.email}</p>
                                 </div>
                               </div>
@@ -523,13 +939,15 @@ export default function SuperAdminPage() {
 
                             {/* Status */}
                             <TableCell>
-                              <Badge variant={active ? 'success' : 'danger'}>
-                                {active ? (
-                                  <><CheckCircle2 className="h-3 w-3" /> Ativo</>
-                                ) : (
-                                  <><XCircle className="h-3 w-3" /> Inativo</>
-                                )}
-                              </Badge>
+                              {user.blocked ? (
+                                <Badge variant="danger"><Ban className="h-3 w-3" /> Bloqueado</Badge>
+                              ) : status === 'active' ? (
+                                <Badge variant="success"><CheckCircle2 className="h-3 w-3" /> Ativo</Badge>
+                              ) : status === 'inactive' ? (
+                                <Badge variant="danger"><XCircle className="h-3 w-3" /> Inativo</Badge>
+                              ) : (
+                                <Badge variant="secondary">Sem loja</Badge>
+                              )}
                             </TableCell>
 
                             {/* Plan */}
@@ -537,11 +955,7 @@ export default function SuperAdminPage() {
                               {user.store ? (
                                 <Badge
                                   variant={user.store.plan === 'PRO' ? 'default' : 'secondary'}
-                                  className={
-                                    user.store.plan === 'PRO'
-                                      ? 'bg-violet-500/10 text-violet-700 dark:text-violet-400'
-                                      : ''
-                                  }
+                                  className={user.store.plan === 'PRO' ? 'bg-violet-500/10 text-violet-700 dark:text-violet-400' : ''}
                                 >
                                   {user.store.plan === 'PRO' && <Crown className="h-3 w-3" />}
                                   {user.store.plan}
@@ -554,14 +968,21 @@ export default function SuperAdminPage() {
                             {/* Expires */}
                             <TableCell>
                               {user.store?.planExpiresAt ? (
-                                <span className={['text-sm', expired ? 'text-red-600 dark:text-red-400 font-medium' : ''].join(' ')}>
-                                  {formatDate(user.store.planExpiresAt)}
-                                  {expired && (
-                                    <span className="ml-1.5 rounded bg-red-50 px-1 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-500/10 dark:text-red-400">
-                                      EXPIRADO
-                                    </span>
-                                  )}
-                                </span>
+                                expiring && !expired ? (
+                                  <Badge variant="warning">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Expira em {daysLeft}d
+                                  </Badge>
+                                ) : (
+                                  <span className={['text-sm', expired ? 'text-red-600 dark:text-red-400 font-medium' : ''].join(' ')}>
+                                    {formatDate(user.store.planExpiresAt)}
+                                    {expired && (
+                                      <span className="ml-1.5 rounded bg-red-50 px-1 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                                        EXPIRADO
+                                      </span>
+                                    )}
+                                  </span>
+                                )
                               ) : (
                                 <span className="text-sm text-muted-foreground">—</span>
                               )}
@@ -598,18 +1019,38 @@ export default function SuperAdminPage() {
                               {formatDate(user.createdAt)}
                             </TableCell>
 
-                            {/* Action */}
+                            {/* Actions */}
                             <TableCell>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                onClick={() => setEditUser(user)}
-                                disabled={!user.store}
-                                title={!user.store ? 'Usuário sem loja' : 'Editar assinatura'}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => setEditUser(user)}
+                                  disabled={!user.store}
+                                  title={!user.store ? 'Usuário sem loja' : 'Editar assinatura'}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className={['h-8 w-8', user.blocked ? 'text-emerald-600 hover:text-emerald-700' : 'text-amber-600 hover:text-amber-700'].join(' ')}
+                                  onClick={() => handleBlock(user)}
+                                  title={user.blocked ? 'Desbloquear usuário' : 'Bloquear usuário'}
+                                >
+                                  {user.blocked ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className={['h-8 w-8', user.role === 'ADMIN' ? 'text-blue-600 hover:text-blue-700' : 'text-muted-foreground'].join(' ')}
+                                  onClick={() => handleRole(user)}
+                                  title={user.role === 'ADMIN' ? 'Rebaixar para usuário' : 'Promover a admin'}
+                                >
+                                  {user.role === 'ADMIN' ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -618,12 +1059,22 @@ export default function SuperAdminPage() {
                   </TableBody>
                 </Table>
               </div>
+
+              <div className="px-6 py-4">
+                <Pagination
+                  total={filtered.length}
+                  page={safePage}
+                  pageSize={pageSize}
+                  onPage={setPage}
+                  onPageSize={(s) => { setPageSize(s); setPage(1); }}
+                />
+              </div>
             </motion.div>
           </>
         )}
       </div>
 
-      {/* Edit dialog */}
+      {/* Edit plan dialog */}
       {editUser && (
         <EditPlanDialog
           user={editUser}
@@ -632,6 +1083,13 @@ export default function SuperAdminPage() {
           onSaved={handleSaved}
         />
       )}
+
+      {/* Detail dialog */}
+      <UserDetailDialog
+        userId={detailUserId}
+        open={!!detailUserId}
+        onClose={() => setDetailUserId(null)}
+      />
     </div>
   );
 }

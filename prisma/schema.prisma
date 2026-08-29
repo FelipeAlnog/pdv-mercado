@@ -31,11 +31,15 @@ model User {
   phone         String?
   paymentCustomerId String?
 
-  emailVerified Boolean      
+  emailVerified Boolean
+  blocked       Boolean       @default(false)
+  role          Role          @default(USER)
+
   accounts      Account[]
- 
-  store             Store?
+  store         Store?
   sessions      Session[]
+  adminLogs     AdminLog[]    @relation("AdminLogAdmin")
+  targetLogs    AdminLog[]    @relation("AdminLogTarget")
 }
 
 model VerificationToken {
@@ -214,4 +218,22 @@ enum PaymentProvider {
 enum Plan {
   FREE
   PRO
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model AdminLog {
+  id           String   @id @default(uuid())
+  adminId      String
+  adminEmail   String
+  targetUserId String
+  targetEmail  String
+  action       String
+  details      Json?
+  createdAt    DateTime @default(now())
+  admin        User     @relation("AdminLogAdmin",  fields: [adminId],      references: [id], onDelete: Cascade)
+  target       User     @relation("AdminLogTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
 }

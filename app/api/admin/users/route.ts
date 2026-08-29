@@ -15,6 +15,8 @@ export async function GET(req: NextRequest) {
         name: true,
         email: true,
         createdAt: true,
+        blocked: true,
+        role: true,
         store: {
           select: {
             id: true,
